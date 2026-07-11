@@ -1,0 +1,66 @@
+{
+  "welcome": "Üdvözöljük a személyes fiókban.",
+  "wallet": "Pénztárca",
+  "information": "Információ",
+  "status": "Állapot",
+  "registered": "Regisztrálva",
+  "notRegistered": "Nincs regisztrálva",
+  "address": "Cím",
+  "activeInvestments": "Aktív befektetések",
+  "totalDeposit": "Összes befizetés",
+  "receivedProfit": "Kapott nyereség",
+  "myInvestments": "Befektetéseim",
+  "noInvestments": "Nincsenek aktív befektetések",
+  "investment": "Befektetés",
+  "amount": "Összeg",
+  "profit": "Nyereség",
+  "active": "Aktív",
+  "finished": "Lezárva",
+  "withdraw": "Kifizetés",
+  "actions": "Műveletek",
+  "enterAmount": "Adja meg az USDT összeget",
+  "createInvestment": "Befektetés létrehozása",
+  "successWithdraw": "A pénzeszközök sikeresen kifizetve!",
+  "successDeposit": "A befektetés sikeresen létrejött!",
+  "enterAmountError": "Adja meg az összeget",
+  "rules_title": "Platformszabályok",
+"rules_subtitle": "Kérjük, használat előtt figyelmesen olvassa el a szabályokat.",
+"continue": "Folytatás",
+"accept_rules": "Elolvastam és teljes mértékben elfogadom a platform szabályait.",
+"copyright": "Minden jog fenntartva.",
+"finish": "Befejezés dátuma",
+"remaining": "Hátralévő",
+"days": "nap",
+"about_title": "Az Investment Pool bemutatása",
+"about_subtitle": "Blockchain alapú befektetési platform",
+
+"about_platform": "A platformról",
+
+"about_platform_text1": "Az Investment Pool egy decentralizált befektetési platform, amely a BNB Smart Chain blokkláncon működik.",
+
+"about_platform_text2": "A platform intelligens szerződést használ minden befektetési művelet automatikus végrehajtására harmadik felek bevonása nélkül.",
+
+"about_principles": "Alapelvek",
+
+"about_principle1": "Minden befektetést az intelligens szerződés kezel.",
+
+"about_principle2": "Minden tranzakció a blokkláncon kerül rögzítésre és teljesen átlátható.",
+
+"about_principle3": "A jutalmak automatikusan a kiválasztott befektetési időszak alapján kerülnek kiszámításra.",
+
+"about_principle4": "A felhasználók saját kriptovaluta pénztárcájukon keresztül teljes mértékben ellenőrzik eszközeiket.",
+
+"about_security": "Biztonság",
+
+"about_security_text1": "Az Investment Pool nem tárolja a felhasználók pénzeszközeit.",
+
+"about_security_text2": "A platform nem fér hozzá a privát kulcsokhoz, a seed phrase-ekhez vagy a felhasználók eszközeihez.",
+
+"about_security_text3": "Minden tranzakciót a pénztárca tulajdonosa hagy jóvá, és közvetlenül az intelligens szerződés hajt végre.",
+
+"about_goal": "Célunk",
+
+"about_goal_text": "Egyszerű, átlátható és biztonságos, blokklánc-technológián alapuló befektetési platform létrehozása.",
+
+"back": "← Vissza"
+}

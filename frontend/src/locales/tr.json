@@ -1,0 +1,98 @@
+{
+  "welcome": "Kişisel hesabınıza hoş geldiniz.",
+  "wallet": "Cüzdan",
+  "information": "Bilgiler",
+  "status": "Durum",
+  "registered": "Kayıtlı",
+  "notRegistered": "Kayıtlı değil",
+  "address": "Adres",
+  "activeInvestments": "Aktif yatırımlar",
+  "totalDeposit": "Toplam yatırım",
+  "receivedProfit": "Alınan kâr",
+  "myInvestments": "Yatırımlarım",
+  "noInvestments": "Aktif yatırım yok",
+  "investment": "Yatırım",
+  "amount": "Tutar",
+  "profit": "Kâr",
+  "active": "Aktif",
+  "finished": "Tamamlandı",
+  "withdraw": "Çek",
+  "actions": "İşlemler",
+  "enterAmount": "USDT miktarını girin",
+  "createInvestment": "Yatırım oluştur",
+  "successWithdraw": "Fonlar başarıyla çekildi!",
+  "successDeposit": "Yatırım başarıyla oluşturuldu!",
+  "enterAmountError": "Miktarı girin",
+"rules_title": "Platform Kuralları",
+"rules_subtitle": "Lütfen platformu kullanmadan önce kuralları dikkatlice okuyun.",
+"continue": "Devam Et",
+"accept_rules": "Platform kurallarını okudum ve tamamen kabul ediyorum.",
+"copyright": "Tüm hakları saklıdır.",
+"finish": "Bitiş tarihi",
+"remaining": "Kalan",
+"days": "gün",
+"about_title": "À propos d'Investment Pool",
+"about_subtitle": "Plateforme d'investissement sur la blockchain",
+
+"about_platform": "À propos de la plateforme",
+
+"about_platform_text1": "Investment Pool est une plateforme d'investissement décentralisée fonctionnant sur la blockchain BNB Smart Chain.",
+
+"about_platform_text2": "La plateforme utilise un smart contract pour exécuter automatiquement toutes les opérations d'investissement sans intervention de tiers.",
+
+"about_principles": "Principes fondamentaux",
+
+"about_principle1": "Tous les investissements sont gérés par le smart contract.",
+
+"about_principle2": "Toutes les transactions sont enregistrées sur la blockchain et sont totalement transparentes.",
+
+"about_principle3": "Les récompenses sont calculées automatiquement selon la période d'investissement choisie.",
+
+"about_principle4": "Les utilisateurs contrôlent entièrement leurs fonds grâce à leur propre portefeuille de cryptomonnaies.",
+
+"about_security": "Sécurité",
+
+"about_security_text1": "Investment Pool ne stocke pas les fonds des utilisateurs.",
+
+"about_security_text2": "La plateforme n'a accès ni aux clés privées, ni aux phrases de récupération, ni aux actifs des utilisateurs.",
+
+"about_security_text3": "Toutes les transactions sont approuvées par le propriétaire du portefeuille et exécutées directement via le smart contract.",
+
+"about_goal": "Notre objectif",
+
+"about_goal_text": "Créer une plateforme d'investissement simple, transparente et sécurisée basée sur la technologie blockchain.",
+
+"back": "← Retour",
+"about_title": "Investment Pool Hakkında",
+"about_subtitle": "Blockchain yatırım platformu",
+
+"about_platform": "Platform Hakkında",
+
+"about_platform_text1": "Investment Pool, BNB Smart Chain üzerinde çalışan merkeziyetsiz bir yatırım platformudur.",
+
+"about_platform_text2": "Platform, tüm yatırım işlemlerini üçüncü tarafların katılımı olmadan otomatik olarak gerçekleştirmek için akıllı sözleşmeler kullanır.",
+
+"about_principles": "Temel İlkeler",
+
+"about_principle1": "Tüm yatırımlar akıllı sözleşme tarafından yönetilir.",
+
+"about_principle2": "Tüm işlemler blok zincirine kaydedilir ve tamamen şeffaftır.",
+
+"about_principle3": "Ödüller seçilen yatırım süresine göre otomatik olarak hesaplanır.",
+
+"about_principle4": "Kullanıcılar fonlarını kendi kripto cüzdanları aracılığıyla tamamen kontrol eder.",
+
+"about_security": "Güvenlik",
+
+"about_security_text1": "Investment Pool kullanıcı fonlarını saklamaz.",
+
+"about_security_text2": "Platformun özel anahtarlara, seed phrase'lere veya kullanıcı varlıklarına erişimi yoktur.",
+
+"about_security_text3": "Tüm işlemler cüzdan sahibi tarafından onaylanır ve doğrudan akıllı sözleşme üzerinden gerçekleştirilir.",
+
+"about_goal": "Hedefimiz",
+
+"about_goal_text": "Blockchain teknolojisine dayalı basit, şeffaf ve güvenli bir yatırım platformu oluşturmak.",
+
+"back": "← Geri"
+}

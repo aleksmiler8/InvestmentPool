@@ -1,0 +1,316 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.28;
+
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
+contract InvestmentPoolV2 is Ownable, Pausable, ReentrancyGuard {
+
+    IERC20 public immutable usdt;
+
+    uint256 public totalDeposits;
+    uint256 public totalInvestors;
+
+    uint256 public constant DAY = 1 days;
+    uint256 public constant WEEK = 7 days;
+    uint256 public constant MONTH = 30 days;
+    uint256 public constant THREE_MONTHS = 90 days;
+    uint256 public constant SIX_MONTHS = 180 days;
+    uint256 public constant YEAR = 365 days;
+
+    struct Investment {
+        uint256 amount;
+        uint256 startTime;
+        uint256 endTime;
+        uint256 period;
+        uint256 reward;
+        bool active;
+        bool finished;
+    }
+
+    struct Investor {
+        bool exists;
+        uint256 totalInvested;
+        uint256 totalWithdrawn;
+        uint256 totalReward;
+        Investment[] investments;
+    }
+
+    mapping(address => Investor) private investors;
+
+    mapping(uint256 => uint256) public rewardRate;
+    uint256 public earlyWithdrawFee = 1500; // 15%
+
+    event Deposited(
+        address indexed user,
+        uint256 indexed investmentId,
+        uint256 amount,
+        uint256 period
+    );
+
+    event Withdrawn(
+        address indexed user,
+        uint256 indexed investmentId,
+        uint256 amount,
+        uint256 reward
+    );
+
+    event EarlyWithdraw(
+        address indexed user,
+        uint256 indexed investmentId,
+        uint256 amount
+    );
+
+    event RewardRateChanged(
+        uint256 period,
+        uint256 reward
+    );
+
+    event EmergencyPaused();
+
+    event EmergencyUnpaused();
+
+    modifier validPeriod(uint256 period) {
+        require(
+            period == DAY ||
+            period == WEEK ||
+            period == MONTH ||
+            period == THREE_MONTHS ||
+            period == SIX_MONTHS ||
+            period == YEAR,
+            "Invalid period"
+        );
+        _;
+    }
+
+    constructor(address usdtAddress)
+        Ownable(msg.sender)
+    {
+        require(usdtAddress != address(0), "Invalid USDT");
+
+        usdt = IERC20(usdtAddress);
+
+        rewardRate[DAY] = 10;
+        rewardRate[WEEK] = 80;
+        rewardRate[MONTH] = 350;
+        rewardRate[THREE_MONTHS] = 1200;
+        rewardRate[SIX_MONTHS] = 2800;
+        rewardRate[YEAR] = 7000;
+    }    function deposit(
+        uint256 amount,
+        uint256 period
+    )
+        external
+        whenNotPaused
+        nonReentrant
+        validPeriod(period)
+    {
+        require(amount > 0, "Amount must be greater than zero");
+
+        require(
+            usdt.transferFrom(msg.sender, address(this), amount),
+            "Transfer failed"
+        );
+
+        Investor storage investor = investors[msg.sender];
+
+        if (!investor.exists) {
+            investor.exists = true;
+            totalInvestors++;
+        }
+
+        uint256 reward = (amount * rewardRate[period]) / 10000;
+
+        investor.investments.push(
+            Investment({
+                amount: amount,
+                startTime: block.timestamp,
+                endTime: block.timestamp + period,
+                period: period,
+                reward: reward,
+                active: true,
+                finished: false
+            })
+        );
+
+        investor.totalInvested += amount;
+        totalDeposits += amount;
+
+        emit Deposited(
+            msg.sender,
+            investor.investments.length - 1,
+            amount,
+            period
+        );
+    }
+
+    function getInvestmentCount(address user)
+        external
+        view
+        returns (uint256)
+    {
+        return investors[user].investments.length;
+    }
+
+    function getInvestment(
+        address user,
+        uint256 id
+    )
+        external
+        view
+        returns (
+            uint256 amount,
+            uint256 startTime,
+            uint256 endTime,
+            uint256 period,
+            uint256 reward,
+            bool active,
+            bool finished
+        )
+    {
+        Investment storage inv = investors[user].investments[id];
+
+        return (
+            inv.amount,
+            inv.startTime,
+            inv.endTime,
+            inv.period,
+            inv.reward,
+            inv.active,
+            inv.finished
+        );
+    }function withdraw(uint256 investmentId)
+    external
+    whenNotPaused
+    nonReentrant
+{
+    Investor storage investor = investors[msg.sender];
+
+    require(
+        investmentId < investor.investments.length,
+        "Invalid investment"
+    );
+
+    Investment storage inv = investor.investments[investmentId];
+
+    require(inv.active, "Investment inactive");
+    require(!inv.finished, "Already withdrawn");
+    require(block.timestamp >= inv.endTime, "Investment not finished");
+
+    inv.active = false;
+    inv.finished = true;
+
+    uint256 payout = inv.amount + inv.reward;
+
+    investor.totalWithdrawn += payout;
+    investor.totalReward += inv.reward;
+
+    require(
+        usdt.transfer(msg.sender, payout),
+        "Transfer failed"
+    );
+
+    emit Withdrawn(
+        msg.sender,
+        investmentId,
+        inv.amount,
+        inv.reward
+    );
+}
+function earlyWithdraw(uint256 investmentId)
+    external
+    whenNotPaused
+    nonReentrant
+{
+    Investor storage investor = investors[msg.sender];
+    require(
+        investmentId < investor.investments.length,
+        "Invalid investment"
+    );
+
+    Investment storage inv = investor.investments[investmentId];
+
+    require(inv.active, "Investment inactive");
+    require(!inv.finished, "Already withdrawn");
+    require(block.timestamp < inv.endTime, "Use normal withdraw");
+
+    inv.active = false;
+    inv.finished = true;
+
+    uint256 fee = (inv.amount * earlyWithdrawFee) / 10000;
+    uint256 payout = inv.amount - fee;
+
+    investor.totalWithdrawn += payout;
+
+    require(
+        usdt.transfer(msg.sender, payout),
+        "Transfer failed"
+    );
+
+    emit EarlyWithdraw(
+        msg.sender,
+        investmentId,
+        payout
+    );
+}
+function setEarlyWithdrawFee(uint256 fee)
+    external
+    onlyOwner
+{
+    require(fee <= 3000, "Fee too high"); // максимум 30%
+    earlyWithdrawFee = fee;
+}
+
+function setRewardRate(
+    uint256 period,
+    uint256 reward
+)
+    external
+    onlyOwner
+    validPeriod(period)
+{
+    rewardRate[period] = reward;
+
+    emit RewardRateChanged(
+        period,
+        reward
+    );
+}function pause()
+    external
+    onlyOwner
+{
+    _pause();
+
+    emit EmergencyPaused();
+}function unpause()
+    external
+    onlyOwner
+{
+    _unpause();
+
+    emit EmergencyUnpaused();
+}
+function getInvestor(address user)
+    external
+    view
+    returns (
+        bool exists,
+        uint256 totalInvested,
+        uint256 totalWithdrawn,
+        uint256 totalReward,
+        uint256 investmentCount
+    )
+{
+    Investor storage investor = investors[user];
+
+    return (
+        investor.exists,
+        investor.totalInvested,
+        investor.totalWithdrawn,
+        investor.totalReward,
+        investor.investments.length
+    );
+}
+}

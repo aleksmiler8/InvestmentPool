@@ -1,0 +1,67 @@
+{
+  "welcome": "Welcome to your personal account.",
+  "wallet": "Wallet",
+  "information": "Information",
+  "status": "Status",
+  "registered": "Registered",
+  "notRegistered": "Not registered",
+  "address": "Address",
+  "activeInvestments": "Active investments",
+  "totalDeposit": "Total deposit",
+  "receivedProfit": "Received profit",
+  "myInvestments": "My investments",
+  "noInvestments": "No active investments",
+  "investment": "Investment",
+  "amount": "Amount",
+  "profit": "Profit",
+  "active": "Active",
+  "finished": "Finished",
+  "withdraw": "Withdraw",
+  "actions": "Actions",
+  "enterAmount": "Enter USDT amount",
+  "createInvestment": "Create investment",
+  "successWithdraw": "Funds withdrawn successfully!",
+  "successDeposit": "Investment created successfully!",
+  "enterAmountError": "Enter amount",
+
+  "rules_title": "Platform Rules",
+"rules_subtitle": "Please read the platform rules carefully before using the platform.",
+"continue": "Continue",
+"accept_rules": "I have read and fully accept the platform rules.",
+"copyright": "All rights reserved.",
+"finish": "Finish",
+"remaining": "Remaining",
+"days": "days",
+"about_title": "About Investment Pool",
+"about_subtitle": "Smart Blockchain Investment Platform",
+
+"about_platform": "About the Platform",
+
+"about_platform_text1": "Investment Pool is a decentralized investment platform operating on the BNB Smart Chain blockchain.",
+
+"about_platform_text2": "The platform uses a smart contract to automatically execute all investment operations without the involvement of third parties.",
+
+"about_principles": "Core Principles",
+
+"about_principle1": "All investments are managed by the smart contract.",
+
+"about_principle2": "All transactions are recorded on the blockchain and are fully transparent.",
+
+"about_principle3": "Rewards are calculated automatically according to the selected investment period.",
+
+"about_principle4": "Users have full control over their funds through their own cryptocurrency wallet.",
+
+"about_security": "Security",
+
+"about_security_text1": "Investment Pool never stores users' funds.",
+
+"about_security_text2": "The platform has no access to private keys, seed phrases, or users' assets.",
+
+"about_security_text3": "All transactions are approved by the wallet owner and executed directly through the smart contract.",
+
+"about_goal": "Our Goal",
+
+"about_goal_text": "To create a simple, transparent, and secure investment platform based on blockchain technology.",
+
+"back": "← Back"
+}

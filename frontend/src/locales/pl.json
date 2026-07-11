@@ -1,0 +1,66 @@
+{
+  "welcome": "Witamy w panelu użytkownika.",
+  "wallet": "Portfel",
+  "information": "Informacje",
+  "status": "Status",
+  "registered": "Zarejestrowany",
+  "notRegistered": "Niezarejestrowany",
+  "address": "Adres",
+  "activeInvestments": "Aktywne inwestycje",
+  "totalDeposit": "Łączny depozyt",
+  "receivedProfit": "Otrzymany zysk",
+  "myInvestments": "Moje inwestycje",
+  "noInvestments": "Brak aktywnych inwestycji",
+  "investment": "Inwestycja",
+  "amount": "Kwota",
+  "profit": "Zysk",
+  "active": "Aktywna",
+  "finished": "Zakończona",
+  "withdraw": "Wypłać",
+  "actions": "Akcje",
+  "enterAmount": "Wprowadź kwotę USDT",
+  "createInvestment": "Utwórz inwestycję",
+  "successWithdraw": "Środki zostały pomyślnie wypłacone!",
+  "successDeposit": "Inwestycja została utworzona!",
+  "enterAmountError": "Wprowadź kwotę",
+  "rules_title": "Zasady platformy",
+"rules_subtitle": "Przed rozpoczęciem korzystania z platformy zapoznaj się z zasadami.",
+"continue": "Kontynuuj",
+"accept_rules": "Zapoznałem się z zasadami platformy i w pełni je akceptuję.",
+"copyright": "Wszelkie prawa zastrzeżone.",
+"finish": "Data zakończenia",
+"remaining": "Pozostało",
+"days": "dni",
+"about_title": "O Investment Pool",
+"about_subtitle": "Platforma inwestycyjna oparta na blockchain",
+
+"about_platform": "O platformie",
+
+"about_platform_text1": "Investment Pool to zdecentralizowana platforma inwestycyjna działająca w sieci BNB Smart Chain.",
+
+"about_platform_text2": "Platforma wykorzystuje smart kontrakt do automatycznego wykonywania wszystkich operacji inwestycyjnych bez udziału stron trzecich.",
+
+"about_principles": "Główne zasady",
+
+"about_principle1": "Wszystkie inwestycje są zarządzane przez smart kontrakt.",
+
+"about_principle2": "Wszystkie transakcje są zapisywane w blockchainie i są całkowicie przejrzyste.",
+
+"about_principle3": "Nagrody są obliczane automatycznie zgodnie z wybranym okresem inwestycji.",
+
+"about_principle4": "Użytkownik w pełni kontroluje swoje środki za pomocą własnego portfela kryptowalutowego.",
+
+"about_security": "Bezpieczeństwo",
+
+"about_security_text1": "Investment Pool nie przechowuje środków użytkowników.",
+
+"about_security_text2": "Platforma nie ma dostępu do kluczy prywatnych, seed phrase ani środków użytkowników.",
+
+"about_security_text3": "Wszystkie transakcje są zatwierdzane przez właściciela portfela i wykonywane bezpośrednio przez smart kontrakt.",
+
+"about_goal": "Nasz cel",
+
+"about_goal_text": "Stworzyć prostą, przejrzystą i bezpieczną platformę inwestycyjną opartą na technologii blockchain.",
+
+"back": "← Wstecz"
+}
