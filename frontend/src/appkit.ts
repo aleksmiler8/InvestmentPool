@@ -7,7 +7,7 @@ export const projectId = "674ce8b1a76f277e5e792f22432f72e6";
 const metadata = {
   name: "Investment Pool",
   description: "Investment Pool",
-  url: "http://localhost:5173",
+ url: "https://www.investmentpoolx.com", 
   icons: ["https://avatars.githubusercontent.com/u/179229932"],
 };
 
