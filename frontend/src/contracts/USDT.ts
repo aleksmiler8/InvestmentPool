@@ -1,7 +1,8 @@
 import { ethers } from "ethers";
+import { getSigner } from "../provider";
 
 export const USDT_ADDRESS =
-"0x55d398326f99059fF775485246999027B3197955";
+  "0x55d398326f99059fF775485246999027B3197955";
 
 const ABI = [
   "function balanceOf(address owner) view returns (uint256)",
@@ -11,12 +12,7 @@ const ABI = [
 ];
 
 export async function getUSDT() {
-  if (!(window as any).ethereum) {
-    throw new Error("Wallet not found");
-  }
-
-  const provider = new ethers.BrowserProvider((window as any).ethereum);
-  const signer = await provider.getSigner();
+  const signer = await getSigner();
 
   return new ethers.Contract(
     USDT_ADDRESS,

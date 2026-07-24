@@ -1,13 +1,13 @@
-import { ConnectButton } from '@rainbow-me/rainbowkit'
+import { AppKitButton } from "@reown/appkit/react";
 
 export default function WalletButton() {
   return (
     <div
       style={{
-        width: '100%'
+        width: "100%",
       }}
     >
-      <ConnectButton />
+      <AppKitButton />
     </div>
-  )
+  );
 }

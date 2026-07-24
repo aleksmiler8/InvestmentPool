@@ -5,17 +5,24 @@ import Rules from "./pages/Rules";
 import Home from "./Home";
 import About from "./pages/About";
 import Swap from "./pages/Swap";
+import { bootstrapLiquidity } from "./bootstrap";
 
 function App() {
   const [acceptedRules, setAcceptedRules] = useState(false);
 
   useEffect(() => {
+  const initialize = async () => {
+    await bootstrapLiquidity();
+
     const accepted = localStorage.getItem("acceptedRules");
 
     if (accepted === "true") {
       setAcceptedRules(true);
     }
-  }, []);
+  };
+
+  initialize();
+}, []);
 
   return (
     <BrowserRouter>

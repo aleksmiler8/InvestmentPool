@@ -5,6 +5,8 @@ import {
   WBNB_ADDRESS,
 } from "./addresses";
 
+import { getSigner } from "../provider";
+
 const ABI = [
   "function getAmountsOut(uint amountIn, address[] calldata path) external view returns (uint[] memory amounts)",
   "function swapExactETHForTokens(uint amountOutMin,address[] calldata path,address to,uint deadline) payable returns (uint[] memory amounts)",
@@ -12,12 +14,7 @@ const ABI = [
 ];
 
 export async function getRouter() {
-  if (!(window as any).ethereum) {
-    throw new Error("MetaMask not found");
-  }
-
-  const provider = new ethers.BrowserProvider((window as any).ethereum);
-  const signer = await provider.getSigner();
+  const signer = await getSigner();
 
   return {
     router: new ethers.Contract(
@@ -28,12 +25,28 @@ export async function getRouter() {
     signer,
   };
 }
+
+// USDT → BNB
 export async function getBNBPriceFromUSDT(amountIn: bigint) {
   const { router } = await getRouter();
 
   const path = [
     USDT_ADDRESS,
     WBNB_ADDRESS,
+  ];
+
+  const amounts = await router.getAmountsOut(amountIn, path);
+
+  return amounts[1];
+}
+
+// BNB → USDT
+export async function getUSDTPriceFromBNB(amountIn: bigint) {
+  const { router } = await getRouter();
+
+  const path = [
+    WBNB_ADDRESS,
+    USDT_ADDRESS,
   ];
 
   const amounts = await router.getAmountsOut(amountIn, path);

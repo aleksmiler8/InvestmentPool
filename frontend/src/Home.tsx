@@ -3,83 +3,151 @@ import { ethers } from "ethers";
 import { getContract } from "./contracts/InvestmentPool";
 import { getToken } from "./contracts/MyToken";
 import { useTranslation } from "react-i18next";
+import { useAccount } from "wagmi";
+
 import Header from "./components/Header";
 import StatsCards from "./components/StatsCards";
 import InvestmentList from "./components/InvestmentList";
 import ActionPanel from "./components/ActionPanel";
-import toast from "react-hot-toast";
 import AdminPanel from "./components/AdminPanel";
-import { useAccount } from "wagmi";
+
+import toast from "react-hot-toast";
+
 export default function Home() {
   const { t } = useTranslation();
   const { address, isConnected } = useAccount();
+
   const [, setRegistered] = useState(false);
-const [wallet, setWallet] = useState("");
-const [bnbBalance, setBnbBalance] = useState("0");
-const [usdtBalance, setUsdtBalance] = useState("0");
-const [amount, setAmount] = useState("");
-const [period, setPeriod] = useState(30 * 24 * 60 * 60);
-const [investmentCount, setInvestmentCount] = useState(0);
-const [totalDeposit, setTotalDeposit] = useState("0");
-const [totalReward, setTotalReward] = useState("0");
-const [investments, setInvestments] = useState<any[]>([]);
-const [isOwner, setIsOwner] = useState(false);
-useEffect(() => {
+
+  const [wallet, setWallet] = useState("");
+  const [bnbBalance, setBnbBalance] = useState("0");
+  const [usdtBalance, setUsdtBalance] = useState("0");
+
+  const [amount, setAmount] = useState("");
+  const [period, setPeriod] = useState(30 * 24 * 60 * 60);
+
+  const [investmentCount, setInvestmentCount] = useState(0);
+  const [totalDeposit, setTotalDeposit] = useState("0");
+  const [totalReward, setTotalReward] = useState("0");
+
+  const [investments, setInvestments] = useState<any[]>([]);
+  const [occupiedPeriods, setOccupiedPeriods] = useState<
+    Record<number, boolean>
+  >({});
+
+  const [depositLoading, setDepositLoading] = useState(false);
+
+  const [isOwner, setIsOwner] = useState(false);
+
+  const [, setDayRate] = useState("0");
+const [, setWeekRate] = useState("0");
+const [, setMonthRate] = useState("0");
+const [, setThreeMonthRate] = useState("0");
+const [, setSixMonthRate] = useState("0");
+const [, setYearRate] = useState("0");
+
+  useEffect(() => {
     if (isConnected && address) {
-        loadUser();
+      loadUser();
     }
-}, [isConnected, address]);
-
- async function loadUser() {
-
+  }, [isConnected, address]);
+    async function loadUser() {
     try {
-        if (!isConnected || !address) return;
+      if (!isConnected || !address) return;
 
-const provider = new ethers.BrowserProvider(window.ethereum);
-const network = await provider.getNetwork();
+      const provider = new ethers.BrowserProvider(
+        (window as any).ethereum
+      );
 
-console.log("Wallet:", address);
+      const balance = await provider.getBalance(address);
+      setBnbBalance(ethers.formatEther(balance));
 
-        const balance = await provider.getBalance(address);setBnbBalance(ethers.formatEther(balance));
-        const token = await getToken();
-const usdt = await token.balanceOf(address);
-setUsdtBalance(ethers.formatUnits(usdt, 18));
+      const token = await getToken();
+      const usdt = await token.balanceOf(address);
+      setUsdtBalance(ethers.formatUnits(usdt, 18));
 
-        setWallet(address);
+      setWallet(address);
 
-        const contract = await getContract();
+      const contract = await getContract();
 
-const owner = await contract.owner();
+      setDayRate(
+        (Number(await contract.rewardRate(86400)) / 100).toFixed(2)
+      );
 
-setIsOwner(owner.toLowerCase() === address.toLowerCase());
+      setWeekRate(
+        (Number(await contract.rewardRate(604800)) / 100).toFixed(2)
+      );
 
-        const count = await contract.getInvestmentCount(address);
+      setMonthRate(
+        (Number(await contract.rewardRate(2592000)) / 100).toFixed(2)
+      );
 
-setRegistered(Number(count) > 0);
-const investor = await contract.getInvestor(address);
-setInvestmentCount(Number(investor.investmentCount));
-setTotalDeposit(ethers.formatUnits(investor.totalInvested, 18));
-setTotalReward(ethers.formatUnits(investor.totalReward, 18));
-const list = [];
+      setThreeMonthRate(
+        (Number(await contract.rewardRate(7776000)) / 100).toFixed(2)
+      );
 
-for (let i = 0; i < Number(investor.investmentCount); i++) {
-  const inv = await contract.getInvestment(address, i);
-  list.push(inv); 
+      setSixMonthRate(
+        (Number(await contract.rewardRate(15552000)) / 100).toFixed(2)
+      );
+
+      setYearRate(
+        (Number(await contract.rewardRate(31536000)) / 100).toFixed(2)
+      );
+
+      const owner = await contract.owner();
+      setIsOwner(owner.toLowerCase() === address.toLowerCase());
+
+      const investor = await contract.getInvestor(address);
+
+      setRegistered(Number(investor.investmentCount) > 0);
+
+      setTotalDeposit(
+        ethers.formatUnits(investor.totalInvested, 18)
+      );
+
+      setTotalReward(
+        ethers.formatUnits(investor.totalReward, 18)
+      );
+
+      const list: any[] = [];
+const occupied: Record<number, boolean> = {};
+
+for (
+  let i = 0;
+  i < Number(investor.investmentCount);
+  i++
+) {
+    const inv = await contract.getInvestment(address, i);
+
+if (inv[5]) {
+    list.push({
+        index: i,
+        investment: inv,
+    });
+
+    occupied[Number(inv[3])] = true;
+}
 }
 
 setInvestments(list);
+      setOccupiedPeriods(occupied);
 
+      const activeCount = list.filter(
+        (inv) => inv[5] === true
+      ).length;
+
+      setInvestmentCount(activeCount);
     } catch (e) {
-        console.log(e);
+      console.error(e);
 
-if (e instanceof Error) {
-    toast.error(e.message);
-} else {
-    toast.error("Unknown error");
-}
+      if (e instanceof Error) {
+        toast.error(e.message);
+      } else {
+        toast.error("Unknown error");
+      }
     }
-}
-  return (
+  }
+    return (
     <div
       style={{
         minHeight: "100vh",
@@ -95,100 +163,118 @@ if (e instanceof Error) {
         }}
       >
         <Header
-  wallet={wallet}
-  bnbBalance={bnbBalance}
-  usdtBalance={usdtBalance}
-/>
-<StatsCards
+          wallet={wallet}
+          bnbBalance={bnbBalance}
+          usdtBalance={usdtBalance}
+        />
+
+        <StatsCards
   investmentCount={investmentCount}
   totalDeposit={totalDeposit}
   totalReward={totalReward}
   t={t}
 />
 
-<h3>{t("my_investments")}</h3>
+        <h3>{t("my_investments")}</h3>
 
-<InvestmentList
-    investments={investments}
-    t={t}
-    onWithdraw={async (inv) => {
-        try {
-            const contract = await getContract();
+        <InvestmentList
+          investments={investments}
+          t={t}
+          onWithdraw={async (inv) => {
+            try {
+              const contract = await getContract();
 
-            const index = investments.indexOf(inv);
+              const index = inv.index;
 
-            const tx = inv.finished
-    ? await contract.withdraw(index)
-    : await contract.earlyWithdraw(index);
+const endTime = Number(inv.investment[2]);
+const isFinished =
+  Date.now() / 1000 >= endTime;
 
-            await tx.wait();
+              const tx = isFinished
+                ? await contract.withdraw(index)
+                : await contract.earlyWithdraw(index);
 
-            toast.success(t("withdraw_success"));
+              await tx.wait();
 
-            loadUser();
-        } catch (e) {
-            console.log(e);
-        }
-    }}
-/>
+              toast.success(t("withdraw_success"));
 
-<br />
+              await loadUser();
+            } catch (e) {
+              console.error(e);
 
-<hr />
+              if (e instanceof Error) {
+                toast.error(e.message);
+              } else {
+                toast.error("Unknown error");
+              }
+            }
+          }}
+        />
+                <br />
 
-<ActionPanel
-  amount={amount}
-  setAmount={setAmount}
-  period={period}
-  setPeriod={setPeriod}
-  t={t}
-  onCreate={async () => {
-    try {
-      if (!amount) {
-        toast.error(t("enterAmountError"));
-        return;
-      }
+        <hr />
 
-      const token = await getToken();
-      const contract = await getContract();
+        <ActionPanel
+          amount={amount}
+          setAmount={setAmount}
+          period={period}
+          setPeriod={setPeriod}
+          occupiedPeriods={occupiedPeriods}
+          loading={depositLoading}
+          t={t}
+          onCreate={async () => {
+            try {
+              if (!amount) {
+                toast.error(t("enterAmountError"));
+                return;
+              }
 
-      const value = ethers.parseUnits(amount, 18);
+              setDepositLoading(true);
 
-      const approveTx = await token.approve(
-        await contract.getAddress(),
-        value
-      );
-      await approveTx.wait();
-      console.log("APPROVE OK");
+              const token = await getToken();
+              const contract = await getContract();
 
-console.log("Calling deposit...");
+              const value = ethers.parseUnits(amount, 18);
 
-const tx = await contract.deposit(value, period);
+              const approveTx = await token.approve(
+                await contract.getAddress(),
+                value
+              );
 
-console.log("Deposit tx:", tx);
+              await approveTx.wait();
 
-      await tx.wait();
+              const tx = await contract.deposit(
+                value,
+                period
+              );
 
-      toast.success(t("successDeposit"));
+              await tx.wait();
 
-      setAmount("");
-      loadUser();
-    } catch (e) {
-  console.error(e);
+              toast.success(t("successDeposit"));
 
-  if (e instanceof Error) {
-    toast.error(e.message);
-} else {
-    toast.error("Unknown error");
-}
-}
-  }}
-  />
+              setAmount("");
 
-<br />
-{isOwner && (
-  <AdminPanel loadUser={loadUser} />
-)}
+              await loadUser();
+            } catch (e) {
+              console.error(e);
+
+              if (e instanceof Error) {
+                toast.error(e.message);
+              } else {
+                toast.error("Unknown error");
+              }
+            } finally {
+              setDepositLoading(false);
+            }
+          }}
+        />
+                <br />
+
+        {isOwner && (
+          <AdminPanel
+            loadUser={loadUser}
+          />
+        )}
       </div>
     </div>
   );

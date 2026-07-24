@@ -1,3 +1,4 @@
+import "./InvestmentList.css";
 import { ethers } from "ethers";
 
 type Props = {
@@ -13,16 +14,7 @@ export default function InvestmentList({
 }: Props) {
   if (investments.length === 0) {
     return (
-      <div
-        style={{
-          padding: "20px",
-          border: "1px solid #ddd",
-          borderRadius: "12px",
-          textAlign: "center",
-          color: "#777",
-          background: "#fafafa",
-        }}
-      >
+      <div className="investment-empty">
         {t("noInvestments")}
       </div>
     );
@@ -32,12 +24,14 @@ export default function InvestmentList({
 
   return (
     <>
-      {investments.map((inv, index) => {
+      {investments.map((item, index) => {
+  const inv = item.investment;
         const amount = ethers.formatUnits(inv[0], 18);
         const startTime = Number(inv[1]);
         const endTime = Number(inv[2]);
         const reward = ethers.formatUnits(inv[4], 18);
-        const finished = inv[6];
+
+        const finished = inv[6] || now >= endTime;
 
         const finishDate = new Date(endTime * 1000);
 
@@ -55,34 +49,18 @@ export default function InvestmentList({
         return (
           <div
             key={index}
-            style={{
-              background: "#ffffff",
-              border: "1px solid #e7e7e7",
-              borderRadius: "16px",
-              padding: "24px",
-              marginBottom: "20px",
-              boxShadow: "0 8px 24px rgba(0,0,0,0.06)",
-            }}
+            className="investment-card"
           >
-            <h3
-              style={{
-                marginTop: 0,
-                color: "#16b6b6",
-              }}
-            >
+            <h3 className="investment-title">
               💰 {t("investment")} #{index + 1}
             </h3>
 
-            <p>
-              <b>{t("amount")}:</b> {amount} USDT
-            </p>
+            <p><b>{t("amount")}:</b> {amount} USDT</p>
+
+            <p><b>{t("profit")}:</b> {reward} USDT</p>
 
             <p>
-              <b>{t("profit")}:</b> {reward} USDT
-            </p>
-
-            <p>
-             <b>{t("finish")}:</b> {" "}
+              <b>{t("finish")}:</b>{" "}
               {finishDate.toLocaleDateString()}
             </p>
 
@@ -91,52 +69,40 @@ export default function InvestmentList({
               {finished ? "0 days" : `${remainingDays} days`}
             </p>
 
-            <div
-              style={{
-                width: "100%",
-                height: "10px",
-                background: "#ececec",
-                borderRadius: "20px",
-                overflow: "hidden",
-                margin: "15px 0",
-              }}
-            >
+            <div className="progress">
               <div
-                style={{
-                  width: `${progress}%`,
-                  height: "100%",
-                  background: "#16b6b6",
-                }}
+                className="progress-fill"
+                style={{ width: `${progress}%` }}
               />
             </div>
 
             <p>
               <b>{t("status")}:</b>{" "}
               <span
-                style={{
-                  color: finished ? "#22c55e" : "#f59e0b",
-                  fontWeight: "bold",
-                }}
+                className={
+                  finished
+                    ? "status-finished"
+                    : "status-active"
+                }
               >
                 {finished ? "🟢 " : "🟡 "}
-                {finished ? t("finished") : t("active")}
+                {finished
+                  ? t("finished")
+                  : t("active")}
               </span>
             </p>
 
             <button
-              onClick={() => onWithdraw(inv)}
-              style={{
-                marginTop: "10px",
-                padding: "12px 20px",
-                background: finished ? "#22c55e" : "#f59e0b",
-                color: "#ffffff",
-                border: "none",
-                borderRadius: "10px",
-                fontWeight: "bold",
-                cursor: "pointer",
-              }}
+              className={
+                finished
+                  ? "claim-button"
+                  : "withdraw-button"
+              }
+              onClick={() => onWithdraw(item)}
             >
-              {finished ? t("claim") : t("earlyWithdraw")}
+              {finished
+                ? t("claim")
+                : t("earlyWithdraw")}
             </button>
           </div>
         );

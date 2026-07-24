@@ -1,0 +1,1 @@
+export { default as AdminPanelV3 } from "./AdminPanelV3";

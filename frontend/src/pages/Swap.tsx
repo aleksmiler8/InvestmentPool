@@ -1,9 +1,16 @@
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { ethers } from "ethers";
-import { getToken } from "../contracts/MyToken";
-import { getBNBPriceFromUSDT } from "../contracts/PancakeRouter";
-import { swapBNBToUSDT } from "../services/swapService";
+import { getUSDT } from "../contracts/USDT";
+import {
+  getBNBPriceFromUSDT,
+  getUSDTPriceFromBNB,
+} from "../contracts/PancakeRouter";
+import {
+  swapBNBToUSDT,
+  swapUSDTToBNB,
+} from "../services/swapService";
+import { getProvider } from "../provider";
 
 export default function Swap() {
   const navigate = useNavigate();
@@ -22,7 +29,7 @@ async function loadBalances() {
   try {
     if (!window.ethereum) return;
 
-    const provider = new ethers.BrowserProvider(window.ethereum);
+    const provider = await getProvider();
     const signer = await provider.getSigner();
 
     const address = await signer.getAddress();
@@ -31,10 +38,10 @@ async function loadBalances() {
     setBnbBalance(ethers.formatEther(bnb));
     setUsdtBalance("0");
 
-    const token = await getToken();
-    const usdt = await token.balanceOf(address);
+const token = await getUSDT();
+const usdt = await token.balanceOf(address);
 
-    setUsdtBalance(ethers.formatUnits(usdt, 18));
+setUsdtBalance(ethers.formatUnits(usdt, 18));
     } catch (error) {
     console.error(error);
     alert(String(error));
@@ -89,26 +96,40 @@ async function loadBalances() {
           <input
   value={fromAmount}
   onChange={async (e) => {
-    const value = e.target.value;
-setFromAmount(value);
+  const value = e.target.value;
+  setFromAmount(value);
 
-if (!value) {
-  setToAmount("");
-  return;
-}
+  if (!value || Number(value) <= 0) {
+    setToAmount("");
+    return;
+  }
 
-try {
-  const amountIn = ethers.parseUnits(value, 18);
+  try {
+    const amountIn =
+      swapDirection === "USDT_TO_BNB"
+        ? ethers.parseUnits(value, 18)
+        : ethers.parseEther(value);
 
-  const amountOut = await getBNBPriceFromUSDT(amountIn);
+    if (amountIn === 0n) {
+      setToAmount("");
+      return;
+    }
 
-  setToAmount(
-    ethers.formatEther(amountOut)
-  );
-} catch (e) {
-  console.log(e);
-}
-  }}
+    const amountOut =
+      swapDirection === "USDT_TO_BNB"
+        ? await getBNBPriceFromUSDT(amountIn)
+        : await getUSDTPriceFromBNB(amountIn);
+
+    setToAmount(
+      swapDirection === "USDT_TO_BNB"
+        ? ethers.formatEther(amountOut)
+        : ethers.formatUnits(amountOut, 18)
+    );
+  } catch (e) {
+    console.error(e);
+    setToAmount("");
+  }
+}}
   placeholder="0.00"
   style={{
   width: "100%",
@@ -204,13 +225,16 @@ try {
 <button
   onClick={async () => {
   try {
-    await swapBNBToUSDT(fromAmount);
-    alert("Swap completed!");
+    if (swapDirection === "BNB_TO_USDT") {
+      await swapBNBToUSDT(fromAmount);
+    } else {
+      await swapUSDTToBNB(fromAmount);
+    }
+
     loadBalances();
-  }catch (e: any) {
+  } catch (e: any) {
     console.error(e);
-    alert(e?.message || String(e));
-}
+  }
 }}
   style={{
     width: "100%",

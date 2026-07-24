@@ -5,9 +5,7 @@ export default function Landing() {
 
       <p>Smart Blockchain Investment Platform</p>
 
-      <button>
-        Connect Wallet
-      </button>
+      <appkit-button />
     </div>
   );
 }

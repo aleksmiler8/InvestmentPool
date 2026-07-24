@@ -1,15 +1,11 @@
 import { ethers } from "ethers";
+import { getSigner } from "../provider";
 import { InvestmentPoolABI } from "./InvestmentPoolABI";
 
-const CONTRACT_ADDRESS = "0x8E0D591F0f387e0e87FAa67B647f8C3422A27385";
+const CONTRACT_ADDRESS = "0x5599EcE84aB7aBa2F180a77bb45A6E32C51A94b6";
 
 export async function getContract() {
-  if (!(window as any).ethereum) {
-    throw new Error("MetaMask not found");
-  }
-
-  const provider = new ethers.BrowserProvider((window as any).ethereum);
-  const signer = await provider.getSigner();
+  const signer = await getSigner();
 
   return new ethers.Contract(
     CONTRACT_ADDRESS,

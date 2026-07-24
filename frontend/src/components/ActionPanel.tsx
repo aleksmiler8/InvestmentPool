@@ -1,3 +1,5 @@
+import "./ActionPanel.css";
+
 type Props = {
   amount: string;
   setAmount: (value: string) => void;
@@ -5,8 +7,11 @@ type Props = {
   period: number;
   setPeriod: (value: number) => void;
 
-  onCreate: () => void;
+  occupiedPeriods: Record<number, boolean>;
+
+  onCreate: () => Promise<void>;
   t: (key: string) => string;
+  loading: boolean;
 };
 
 export default function ActionPanel({
@@ -14,112 +19,95 @@ export default function ActionPanel({
   setAmount,
   period,
   setPeriod,
+  occupiedPeriods,
   onCreate,
+  loading,
   t,
 }: Props) {
   return (
-    <>
+    <div className="action-panel">
       <h3>{t("actions")}</h3>
 
       <input
+        className="action-input"
         type="text"
         placeholder={t("enterAmount")}
         value={amount}
         onChange={(e) => setAmount(e.target.value)}
-        style={{
-          width: "100%",
-          padding: "14px",
-          marginBottom: "20px",
-          borderRadius: "12px",
-          border: "1px solid #d1d5db",
-          fontSize: "16px",
-          boxSizing: "border-box",
-        }}
       />
 
-      <h3 style={{ marginBottom: "15px" }}>
+      <h3 className="period-title">
         Investment Period
       </h3>
 
-      <div
-        style={{
-          display: "grid",
-          gap: "10px",
-          marginBottom: "25px",
-        }}
-      >
-        <label>
-          <input
-            type="radio"
-            checked={period === 86400}
-            onChange={() => setPeriod(86400)}
-          />{" "}
-          1 Day
-        </label>
+      <div className="period-list">
+  <label className="period-item">
+    <input
+      type="radio"
+      checked={period === 86400}
+      disabled={occupiedPeriods[86400]}
+      onChange={() => setPeriod(86400)}
+    />
+    1 Day
+  </label>
 
-        <label>
-          <input
-            type="radio"
-            checked={period === 604800}
-            onChange={() => setPeriod(604800)}
-          />{" "}
-          7 Days
-        </label>
+  <label className="period-item">
+    <input
+      type="radio"
+      checked={period === 604800}
+      disabled={occupiedPeriods[604800]}
+      onChange={() => setPeriod(604800)}
+    />
+    7 Days
+  </label>
 
-        <label>
-          <input
-            type="radio"
-            checked={period === 2592000}
-            onChange={() => setPeriod(2592000)}
-          />{" "}
-          30 Days
-        </label>
+  <label className="period-item">
+    <input
+      type="radio"
+      checked={period === 2592000}
+      disabled={occupiedPeriods[2592000]}
+      onChange={() => setPeriod(2592000)}
+    />
+    30 Days
+  </label>
 
-        <label>
-          <input
-            type="radio"
-            checked={period === 7776000}
-            onChange={() => setPeriod(7776000)}
-          />{" "}
-          90 Days
-        </label>
+  <label className="period-item">
+    <input
+      type="radio"
+      checked={period === 7776000}
+      disabled={occupiedPeriods[7776000]}
+      onChange={() => setPeriod(7776000)}
+    />
+    90 Days
+  </label>
 
-        <label>
-          <input
-            type="radio"
-            checked={period === 15552000}
-            onChange={() => setPeriod(15552000)}
-          />{" "}
-          180 Days
-        </label>
+  <label className="period-item">
+    <input
+      type="radio"
+      checked={period === 15552000}
+      disabled={occupiedPeriods[15552000]}
+      onChange={() => setPeriod(15552000)}
+    />
+    180 Days
+  </label>
 
-        <label>
-          <input
-            type="radio"
-            checked={period === 31536000}
-            onChange={() => setPeriod(31536000)}
-          />{" "}
-          365 Days
-        </label>
-      </div>
-
+  <label className="period-item">
+    <input
+      type="radio"
+      checked={period === 31536000}
+      disabled={occupiedPeriods[31536000]}
+      onChange={() => setPeriod(31536000)}
+    />
+    365 Days
+  </label>
+</div>
       <button
+        className="create-button"
         onClick={onCreate}
-        style={{
-          width: "100%",
-          padding: "16px",
-          background: "#14b8a6",
-          color: "#fff",
-          border: "none",
-          borderRadius: "12px",
-          fontSize: "16px",
-          fontWeight: "bold",
-          cursor: "pointer",
-          transition: "0.2s",
-        }}
+        disabled={loading}
       >
         {t("createInvestment")}
       </button>
-    </>
+    </div>
   );
 }

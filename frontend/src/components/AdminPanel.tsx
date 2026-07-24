@@ -2,6 +2,7 @@ import { getContract } from "../contracts/InvestmentPool";
 import toast from "react-hot-toast";
 import { useState, useEffect } from "react";
 import { ethers } from "ethers";
+import { AdminPanelV3 } from "./admin-v3";
 
 type Props = {
   loadUser: () => Promise<void>;
@@ -87,6 +88,33 @@ const loadStatistics = async () => {
 
     const investors = await contract.totalInvestors();
     const deposits = await contract.totalDeposits();
+    setDayRate(
+  (Number(await contract.rewardRate(86400)) / 100).toString()
+);
+
+setWeekRate(
+  (Number(await contract.rewardRate(604800)) / 100).toString()
+);
+
+setMonthRate(
+  (Number(await contract.rewardRate(2592000)) / 100).toString()
+);
+
+setThreeMonthRate(
+  (Number(await contract.rewardRate(7776000)) / 100).toString()
+);
+
+setSixMonthRate(
+  (Number(await contract.rewardRate(15552000)) / 100).toString()
+);
+
+setYearRate(
+  (Number(await contract.rewardRate(31536000)) / 100).toString()
+);
+
+setEarlyFee(
+  (Number(await contract.earlyWithdrawFee()) / 100).toString()
+);
     const balance = await contract.usdt().then(async (tokenAddress: string) => {
   const token = new ethers.Contract(
     tokenAddress,
@@ -374,8 +402,10 @@ return (
           💾 Save Fee
         </button>
       </div>
+      <AdminPanelV3 />
 
     </div>
+  
   </div>
 );
 }

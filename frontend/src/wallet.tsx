@@ -1,58 +1,25 @@
-import "@rainbow-me/rainbowkit/styles.css";
+"use client";
 
-import { getDefaultConfig } from "@rainbow-me/rainbowkit";
+import type { ReactNode } from "react";
 import { WagmiProvider } from "wagmi";
-import { bsc } from "wagmi/chains";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { RainbowKitProvider } from "@rainbow-me/rainbowkit";
-import {
-  metaMaskWallet,
-  coinbaseWallet,
-  okxWallet,
-  rabbyWallet,
-  walletConnectWallet,
-  trustWallet,
-} from "@rainbow-me/rainbowkit/wallets";
 
-const config = getDefaultConfig({
-  appName: "Investment Pool",
-  projectId: "8df61e14118f65008c098cf9046f1d28",
+import { wagmiAdapter } from "./appkit";
 
-  chains: [bsc],
-
-  wallets: [
-    {
-      groupName: "Recommended",
-      wallets: [
-        metaMaskWallet,
-        trustWallet,
-        okxWallet,
-        coinbaseWallet,
-        rabbyWallet,
-      ],
-    },
-    {
-      groupName: "Other",
-      wallets: [
-        walletConnectWallet,
-      ],
-    },
-  ],
-});
+// Инициализирует AppKit (createAppKit вызывается один раз)
+import "./appkit";
 
 const queryClient = new QueryClient();
 
 export function WalletProvider({
   children,
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
-    <WagmiProvider config={config}>
+    <WagmiProvider config={wagmiAdapter.wagmiConfig}>
       <QueryClientProvider client={queryClient}>
-        <RainbowKitProvider>
-          {children}
-        </RainbowKitProvider>
+        {children}
       </QueryClientProvider>
     </WagmiProvider>
   );

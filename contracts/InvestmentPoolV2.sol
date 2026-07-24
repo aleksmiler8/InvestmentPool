@@ -5,13 +5,18 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Pausable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 contract InvestmentPoolV2 is Ownable, Pausable, ReentrancyGuard {
+    using SafeERC20 for IERC20;
 
     IERC20 public immutable usdt;
 
-    uint256 public totalDeposits;
-    uint256 public totalInvestors;
+address public reserveWallet;
+
+uint256 public totalDeposits;
+uint256 public totalInvestors;
+uint256 public accumulatedFees;
 
     uint256 public constant DAY = 1 days;
     uint256 public constant WEEK = 7 days;
@@ -71,6 +76,10 @@ contract InvestmentPoolV2 is Ownable, Pausable, ReentrancyGuard {
     event EmergencyPaused();
 
     event EmergencyUnpaused();
+    event FeesWithdrawn(
+    address indexed owner,
+    uint256 amount
+);
 
     modifier validPeriod(uint256 period) {
         require(
@@ -85,13 +94,18 @@ contract InvestmentPoolV2 is Ownable, Pausable, ReentrancyGuard {
         _;
     }
 
-    constructor(address usdtAddress)
-        Ownable(msg.sender)
-    {
+    constructor(
+    address usdtAddress,
+    address reserveAddress
+)
+    Ownable(msg.sender)
+{
         require(usdtAddress != address(0), "Invalid USDT");
 
         usdt = IERC20(usdtAddress);
 
+require(reserveAddress != address(0), "Invalid reserve");
+reserveWallet = reserveAddress;
         rewardRate[DAY] = 10;
         rewardRate[WEEK] = 80;
         rewardRate[MONTH] = 350;
@@ -109,12 +123,21 @@ contract InvestmentPoolV2 is Ownable, Pausable, ReentrancyGuard {
     {
         require(amount > 0, "Amount must be greater than zero");
 
-        require(
-            usdt.transferFrom(msg.sender, address(this), amount),
-            "Transfer failed"
-        );
+Investor storage investor = investors[msg.sender];
 
-        Investor storage investor = investors[msg.sender];
+for (uint256 i = 0; i < investor.investments.length; i++) {
+    Investment storage inv = investor.investments[i];
+
+    require(
+        !(inv.active && inv.period == period),
+        "Active deposit for this period already exists"
+    );
+}
+        usdt.safeTransferFrom(
+    msg.sender,
+    address(this),
+    amount
+);
 
         if (!investor.exists) {
             investor.exists = true;
@@ -203,14 +226,17 @@ contract InvestmentPoolV2 is Ownable, Pausable, ReentrancyGuard {
     inv.finished = true;
 
     uint256 payout = inv.amount + inv.reward;
+    require(
+    usdt.balanceOf(address(this)) >= payout,
+    "Insufficient pool liquidity"
+);
 
     investor.totalWithdrawn += payout;
     investor.totalReward += inv.reward;
 
-    require(
-        usdt.transfer(msg.sender, payout),
-        "Transfer failed"
-    );
+    
+    usdt.safeTransfer(msg.sender, payout);
+    
 
     emit Withdrawn(
         msg.sender,
@@ -241,13 +267,17 @@ function earlyWithdraw(uint256 investmentId)
 
     uint256 fee = (inv.amount * earlyWithdrawFee) / 10000;
     uint256 payout = inv.amount - fee;
+    accumulatedFees += fee;
+    require(
+    usdt.balanceOf(address(this)) >= payout,
+    "Insufficient pool liquidity"
+);
 
     investor.totalWithdrawn += payout;
 
-    require(
-        usdt.transfer(msg.sender, payout),
-        "Transfer failed"
-    );
+    
+        usdt.safeTransfer(msg.sender, payout);
+    
 
     emit EarlyWithdraw(
         msg.sender,
@@ -292,6 +322,20 @@ function setRewardRate(
 
     emit EmergencyUnpaused();
 }
+function withdrawAccumulatedFees(uint256 amount)
+    external
+    onlyOwner
+    nonReentrant
+{
+    require(amount > 0, "Invalid amount");
+    require(amount <= accumulatedFees, "Not enough accumulated fees");
+
+    accumulatedFees -= amount;
+
+    usdt.safeTransfer(reserveWallet, amount);
+
+    emit FeesWithdrawn(reserveWallet, amount);
+}
 function getInvestor(address user)
     external
     view
@@ -312,5 +356,13 @@ function getInvestor(address user)
         investor.totalReward,
         investor.investments.length
     );
+}
+function setReserveWallet(address newWallet)
+    external
+    onlyOwner
+{
+    require(newWallet != address(0), "Invalid wallet");
+
+    reserveWallet = newWallet;
 }
 }
