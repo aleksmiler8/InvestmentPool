@@ -39,12 +39,7 @@ export default function Home() {
 
   const [isOwner, setIsOwner] = useState(false);
 
-  const [, setDayRate] = useState("0");
-const [, setWeekRate] = useState("0");
-const [, setMonthRate] = useState("0");
-const [, setThreeMonthRate] = useState("0");
-const [, setSixMonthRate] = useState("0");
-const [, setYearRate] = useState("0");
+  const [rewardRates, setRewardRates] = useState<Record<number, string>>({});
 
   useEffect(() => {
     if (isConnected && address) {
@@ -70,29 +65,14 @@ const [, setYearRate] = useState("0");
 
       const contract = await getContract();
 
-      setDayRate(
-        (Number(await contract.rewardRate(86400)) / 100).toFixed(2)
-      );
-
-      setWeekRate(
-        (Number(await contract.rewardRate(604800)) / 100).toFixed(2)
-      );
-
-      setMonthRate(
-        (Number(await contract.rewardRate(2592000)) / 100).toFixed(2)
-      );
-
-      setThreeMonthRate(
-        (Number(await contract.rewardRate(7776000)) / 100).toFixed(2)
-      );
-
-      setSixMonthRate(
-        (Number(await contract.rewardRate(15552000)) / 100).toFixed(2)
-      );
-
-      setYearRate(
-        (Number(await contract.rewardRate(31536000)) / 100).toFixed(2)
-      );
+      setRewardRates({
+  86400: (Number(await contract.rewardRate(86400)) / 100).toFixed(2),
+  604800: (Number(await contract.rewardRate(604800)) / 100).toFixed(2),
+  2592000: (Number(await contract.rewardRate(2592000)) / 100).toFixed(2),
+  7776000: (Number(await contract.rewardRate(7776000)) / 100).toFixed(2),
+  15552000: (Number(await contract.rewardRate(15552000)) / 100).toFixed(2),
+  31536000: (Number(await contract.rewardRate(31536000)) / 100).toFixed(2),
+});
 
       const owner = await contract.owner();
       setIsOwner(owner.toLowerCase() === address.toLowerCase());
@@ -220,9 +200,14 @@ const isFinished =
           period={period}
           setPeriod={setPeriod}
           occupiedPeriods={occupiedPeriods}
+          rewardRates={rewardRates}
           loading={depositLoading}
           t={t}
           onCreate={async () => {
+            if (!isConnected || !address) {
+  toast.error("Please connect your wallet");
+  return;
+}
             try {
               if (!amount) {
                 toast.error(t("enterAmountError"));

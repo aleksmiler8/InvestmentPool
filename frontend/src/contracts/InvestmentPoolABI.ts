@@ -1,9 +1,14 @@
-export const InvestmentPoolABI =   [
+export const InvestmentPoolABI = [
     {
       "inputs": [
         {
           "internalType": "address",
           "name": "usdtAddress",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "reserveAddress",
           "type": "address"
         }
       ],
@@ -45,6 +50,17 @@ export const InvestmentPoolABI =   [
     {
       "inputs": [],
       "name": "ReentrancyGuardReentrantCall",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "token",
+          "type": "address"
+        }
+      ],
+      "name": "SafeERC20FailedOperation",
       "type": "error"
     },
     {
@@ -113,6 +129,25 @@ export const InvestmentPoolABI =   [
       "anonymous": false,
       "inputs": [],
       "name": "EmergencyUnpaused",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "owner",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "FeesWithdrawn",
       "type": "event"
     },
     {
@@ -286,6 +321,37 @@ export const InvestmentPoolABI =   [
         }
       ],
       "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "accumulatedFees",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "enum InvestmentPoolV2.Protocol",
+          "name": "protocol",
+          "type": "uint8"
+        },
+        {
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "allocateToProtocol",
+      "outputs": [],
+      "stateMutability": "nonpayable",
       "type": "function"
     },
     {
@@ -478,8 +544,107 @@ export const InvestmentPoolABI =   [
       "type": "function"
     },
     {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "name": "pendingReserveFees",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "unlockTime",
+          "type": "uint256"
+        },
+        {
+          "internalType": "bool",
+          "name": "transferred",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "processPendingReserveFees",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "enum InvestmentPoolV2.Protocol",
+          "name": "",
+          "type": "uint8"
+        }
+      ],
+      "name": "protocolBalance",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
       "inputs": [],
       "name": "renounceOwnership",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "reserveWallet",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "returnLiquidityToPool",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "enum InvestmentPoolV2.Protocol",
+          "name": "from",
+          "type": "uint8"
+        },
+        {
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "returnToPool",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -512,6 +677,19 @@ export const InvestmentPoolABI =   [
         }
       ],
       "name": "setEarlyWithdrawFee",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "newWallet",
+          "type": "address"
+        }
+      ],
+      "name": "setReserveWallet",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -563,6 +741,29 @@ export const InvestmentPoolABI =   [
     {
       "inputs": [
         {
+          "internalType": "enum InvestmentPoolV2.Protocol",
+          "name": "from",
+          "type": "uint8"
+        },
+        {
+          "internalType": "enum InvestmentPoolV2.Protocol",
+          "name": "to",
+          "type": "uint8"
+        },
+        {
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "transferBetweenProtocols",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
           "internalType": "address",
           "name": "newOwner",
           "type": "address"
@@ -602,6 +803,19 @@ export const InvestmentPoolABI =   [
         }
       ],
       "name": "withdraw",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "withdrawAccumulatedFees",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"

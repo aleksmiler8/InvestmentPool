@@ -1,9 +1,150 @@
-import { liquidityService } from "../../services/liquidity/LiquidityService";
-export default function LiquidityPanel() {
-    const protocols = liquidityService.getProtocols();
-    const activeProtocols = protocols.filter(
-  (protocol) => protocol.status === "connected"
-).length;
+import { useEffect, useState } from "react";
+import { ethers } from "ethers";
+import toast from "react-hot-toast";
+import { getContract } from "../../contracts/InvestmentPool";
+type Props = {
+  loadUser: () => Promise<void>;
+  loadStatistics: () => Promise<void>;
+};
+
+export default function LiquidityPanel({
+  loadUser,
+  loadStatistics,
+}: Props) {
+  const protocols = [
+  {
+    id: "pool",
+    name: "Pool",
+    status: "connected",
+  },
+  {
+    id: "reserve",
+    name: "Reserve",
+    status: "connected",
+  },
+  {
+    id: "beefy",
+    name: "Beefy",
+    status: "connected",
+  },
+  {
+    id: "venus",
+    name: "Venus",
+    status: "connected",
+  },
+  {
+    id: "pancake",
+    name: "Pancake",
+    status: "connected",
+  },
+];
+    const [showAllocateModal, setShowAllocateModal] = useState(false);
+const [showTransferModal, setShowTransferModal] = useState(false);
+
+const [selectedProtocol, setSelectedProtocol] = useState("Beefy");
+const [fromProtocol, setFromProtocol] = useState("Beefy");
+const [toProtocol, setToProtocol] = useState("Venus");
+const [amount, setAmount] = useState("");
+const [protocolBalances, setProtocolBalances] = useState({
+  Pool: "0",
+  Reserve: "0",
+  Beefy: "0",
+  Venus: "0",
+  Pancake: "0",
+});
+const loadLiquidity = async () => {
+  try {
+    const contract = await getContract();
+
+    const pool = await contract.protocolBalance(0);
+    const reserve = await contract.protocolBalance(1);
+    const beefy = await contract.protocolBalance(2);
+    const venus = await contract.protocolBalance(3);
+    const pancake = await contract.protocolBalance(4);
+
+    setProtocolBalances({
+      Pool: ethers.formatUnits(pool, 18),
+      Reserve: ethers.formatUnits(reserve, 18),
+      Beefy: ethers.formatUnits(beefy, 18),
+      Venus: ethers.formatUnits(venus, 18),
+      Pancake: ethers.formatUnits(pancake, 18),
+    });
+  } catch (e) {
+    console.error("Failed to load liquidity:", e);
+  }
+};
+
+useEffect(() => {
+  loadLiquidity();
+}, []);
+
+const allocateFunds = async () => {
+  try {
+    const contract = await getContract();
+
+    const protocolMap: Record<string, number> = {
+  Beefy: 2,
+  Venus: 3,
+  Pancake: 4,
+};
+
+    const tx = await contract.allocateToProtocol(
+      protocolMap[selectedProtocol],
+      ethers.parseUnits(amount || "0", 18)
+    );
+
+    await tx.wait();
+
+    toast.success("Funds allocated");
+
+    setAmount("");
+    setSelectedProtocol("Beefy");
+    setShowAllocateModal(false);
+
+    await loadUser();
+    await loadStatistics();
+    await loadLiquidity();
+  } catch (e) {
+    console.error(e);
+    toast.error("Allocation failed");
+  }
+};
+
+const transferFunds = async () => {
+  try {
+    const contract = await getContract();
+
+    const protocolMap: Record<string, number> = {
+  Beefy: 2,
+  Venus: 3,
+  Pancake: 4,
+};
+
+    const tx = await contract.transferBetweenProtocols(
+      protocolMap[fromProtocol],
+      protocolMap[toProtocol],
+      ethers.parseUnits(amount || "0", 18)
+    );
+
+    await tx.wait();
+
+    toast.success("Funds transferred");
+
+    setAmount("");
+    setFromProtocol("Beefy");
+    setToProtocol("Venus");
+    setShowTransferModal(false);
+
+    await loadUser();
+    await loadStatistics();
+    await loadLiquidity();
+  } catch (e) {
+    console.error(e);
+    toast.error("Transfer failed");
+  }
+};
+
+  const activeProtocols = protocols.length;
   return (
     <div
       style={{
@@ -37,15 +178,14 @@ export default function LiquidityPanel() {
     <tr key={protocol.id}>
       <td>{protocol.name}</td>
 
-      <td>
-        {protocol.status === "connected"
-          ? "🟢 Connected"
-          : protocol.status === "coming-soon"
-          ? "⚪ Coming Soon"
-          : "🔴 Offline"}
-      </td>
+      <td>🟢 Connected</td>
 
-      <td>{protocol.allocation}%</td>
+      <td>
+  {protocolBalances[
+    protocol.name as keyof typeof protocolBalances
+  ]}{" "}
+  USDT
+</td>
     </tr>
   ))}
         </tbody>
@@ -54,6 +194,223 @@ export default function LiquidityPanel() {
       <p style={{ marginTop: "15px" }}>
   Active Protocols: <b>{activeProtocols} / {protocols.length}</b>
 </p>
+<p style={{ marginTop: "15px" }}>
+  Active Protocols: <b>{activeProtocols} / {protocols.length}</b>
+</p>
+
+<div
+  style={{
+    display: "flex",
+    gap: "12px",
+    marginTop: "20px",
+  }}
+>
+  <button
+    onClick={() => setShowAllocateModal(true)}
+  >
+    Allocate
+  </button>
+
+  <button
+    onClick={() => setShowTransferModal(true)}
+  >
+    Transfer
+  </button>
+</div>
+    {showAllocateModal && (
+  <div
+    style={{
+      position: "fixed",
+      inset: 0,
+      background: "rgba(0,0,0,0.5)",
+      display: "flex",
+      justifyContent: "center",
+      alignItems: "center",
+      zIndex: 1000,
+    }}
+  >
+    <div
+      style={{
+        background: "#fff",
+        padding: "24px",
+        borderRadius: "12px",
+        width: "420px",
+      }}
+    >
+      <h2>Allocate Funds</h2>
+
+      <div style={{ marginTop: "20px" }}>
+        <label>
+          <b>Protocol</b>
+        </label>
+
+        <br />
+
+        <select
+          value={selectedProtocol}
+          onChange={(e) =>
+            setSelectedProtocol(e.target.value)
+          }
+          style={{
+            width: "100%",
+            padding: "8px",
+            marginTop: "8px",
+          }}
+        >
+          <option>Beefy</option>
+          <option>Venus</option>
+          <option>Pancake</option>
+        </select>
+      </div>
+
+      <div style={{ marginTop: "20px" }}>
+        <label>
+          <b>Amount (USDT)</b>
+        </label>
+
+        <br />
+
+        <input
+          type="number"
+          value={amount}
+          onChange={(e) =>
+            setAmount(e.target.value)
+          }
+          placeholder="0.00"
+          style={{
+            width: "100%",
+            padding: "8px",
+            marginTop: "8px",
+            boxSizing: "border-box",
+          }}
+        />
+      </div>
+
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "flex-end",
+          gap: "10px",
+          marginTop: "24px",
+        }}
+      >
+        <button
+          onClick={() =>
+            setShowAllocateModal(false)
+          }
+        >
+          Cancel
+        </button>
+
+        <button
+  onClick={allocateFunds}
+>
+  Allocate
+</button>
+      </div>
     </div>
-  );
+  </div>
+)}
+{showTransferModal && (
+  <div
+    style={{
+      position: "fixed",
+      inset: 0,
+      background: "rgba(0,0,0,0.5)",
+      display: "flex",
+      justifyContent: "center",
+      alignItems: "center",
+      zIndex: 1000,
+    }}
+  >
+    <div
+      style={{
+        background: "#fff",
+        padding: "24px",
+        borderRadius: "12px",
+        width: "420px",
+      }}
+    >
+      <h2>Transfer Funds</h2>
+
+      <div style={{ marginTop: "20px" }}>
+        <label>
+          <b>From Protocol</b>
+        </label>
+
+        <select
+          value={fromProtocol}
+          onChange={(e) => setFromProtocol(e.target.value)}
+          style={{
+            width: "100%",
+            padding: "8px",
+            marginTop: "8px",
+          }}
+        >
+          <option>Beefy</option>
+          <option>Venus</option>
+          <option>Pancake</option>
+        </select>
+      </div>
+
+      <div style={{ marginTop: "20px" }}>
+        <label>
+          <b>To Protocol</b>
+        </label>
+
+        <select
+          value={toProtocol}
+          onChange={(e) => setToProtocol(e.target.value)}
+          style={{
+            width: "100%",
+            padding: "8px",
+            marginTop: "8px",
+          }}
+        >
+          <option>Beefy</option>
+          <option>Venus</option>
+          <option>Pancake</option>
+        </select>
+      </div>
+
+      <div style={{ marginTop: "20px" }}>
+        <label>
+          <b>Amount (USDT)</b>
+        </label>
+
+        <input
+          type="number"
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+          placeholder="0.00"
+          style={{
+            width: "100%",
+            padding: "8px",
+            marginTop: "8px",
+            boxSizing: "border-box",
+          }}
+        />
+      </div>
+
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "flex-end",
+          gap: "10px",
+          marginTop: "24px",
+        }}
+      >
+        <button onClick={() => setShowTransferModal(false)}>
+          Cancel
+        </button>
+
+        <button onClick={transferFunds}>
+          Transfer
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+</div>
+);
 }

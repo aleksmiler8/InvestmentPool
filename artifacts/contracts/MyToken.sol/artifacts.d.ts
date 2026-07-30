@@ -15,7 +15,7 @@ export interface MyToken$Type {
   readonly deployedLinkReferences: {};
   readonly immutableReferences: {};
   readonly inputSourceName: "project/contracts/MyToken.sol";
-  readonly buildInfoId: "solc-0_8_28-6e1f090195d313784bd21bd515d159017194bbae";
+  readonly buildInfoId: "solc-0_8_28-4016e1a5a5851e38581095a75297694411472001";
 };
 
 import "hardhat/types/artifacts";

@@ -9,6 +9,6 @@ export async function bootstrapLiquidity() {
   initialized = true;
 
   await protocolFactory.register(
-    new VenusAdapter()
-  );
+  new VenusAdapter()
+);
 }

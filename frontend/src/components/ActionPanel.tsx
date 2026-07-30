@@ -8,6 +8,7 @@ type Props = {
   setPeriod: (value: number) => void;
 
   occupiedPeriods: Record<number, boolean>;
+  rewardRates: Record<number, string>;
 
   onCreate: () => Promise<void>;
   t: (key: string) => string;
@@ -20,10 +21,20 @@ export default function ActionPanel({
   period,
   setPeriod,
   occupiedPeriods,
+  rewardRates,
   onCreate,
   loading,
   t,
 }: Props) {
+  const periods = [
+    { value: 86400, label: "1 Day" },
+    { value: 604800, label: "7 Days" },
+    { value: 2592000, label: "30 Days" },
+    { value: 7776000, label: "90 Days" },
+    { value: 15552000, label: "180 Days" },
+    { value: 31536000, label: "365 Days" },
+  ];
+
   return (
     <div className="action-panel">
       <h3>{t("actions")}</h3>
@@ -41,66 +52,38 @@ export default function ActionPanel({
       </h3>
 
       <div className="period-list">
-  <label className="period-item">
-    <input
-      type="radio"
-      checked={period === 86400}
-      disabled={occupiedPeriods[86400]}
-      onChange={() => setPeriod(86400)}
-    />
-    1 Day
-  </label>
+        {periods.map((item) => {
+          const occupied = occupiedPeriods[item.value];
 
-  <label className="period-item">
-    <input
-      type="radio"
-      checked={period === 604800}
-      disabled={occupiedPeriods[604800]}
-      onChange={() => setPeriod(604800)}
-    />
-    7 Days
-  </label>
+          return (
+            <label
+              key={item.value}
+              className={`period-item ${
+  occupied ? "occupied" : ""
+} ${
+  period === item.value ? "selected" : ""
+}`}
+            >
+              <input
+                type="radio"
+                checked={period === item.value}
+                disabled={occupied}
+                onChange={() => setPeriod(item.value)}
+              />
 
-  <label className="period-item">
-    <input
-      type="radio"
-      checked={period === 2592000}
-      disabled={occupiedPeriods[2592000]}
-      onChange={() => setPeriod(2592000)}
-    />
-    30 Days
-  </label>
+              <span>
+                {occupied ? "🔒 " : ""}
+                {item.label}
+              </span>
 
-  <label className="period-item">
-    <input
-      type="radio"
-      checked={period === 7776000}
-      disabled={occupiedPeriods[7776000]}
-      onChange={() => setPeriod(7776000)}
-    />
-    90 Days
-  </label>
+              <span className="period-rate">
+                {rewardRates[item.value] ?? "0.00"}%
+              </span>
+            </label>
+          );
+        })}
+      </div>
 
-  <label className="period-item">
-    <input
-      type="radio"
-      checked={period === 15552000}
-      disabled={occupiedPeriods[15552000]}
-      onChange={() => setPeriod(15552000)}
-    />
-    180 Days
-  </label>
-
-  <label className="period-item">
-    <input
-      type="radio"
-      checked={period === 31536000}
-      disabled={occupiedPeriods[31536000]}
-      onChange={() => setPeriod(31536000)}
-    />
-    365 Days
-  </label>
-</div>
       <button
         className="create-button"
         onClick={onCreate}

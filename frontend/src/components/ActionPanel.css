@@ -10,6 +10,12 @@
   border-radius: 12px;
   font-size: 16px;
   box-sizing: border-box;
+  background: #ffffff;
+  color: #111827;
+}
+
+.action-input::placeholder {
+  color: #9ca3af;
 }
 
 .action-input:focus {
@@ -31,20 +37,90 @@
 .period-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
   border: 1px solid #e5e7eb;
-  border-radius: 10px;
+  border-radius: 12px;
+  background: #ffffff;
   cursor: pointer;
-  transition: 0.2s;
+  transition: all 0.2s ease;
 }
 
 .period-item:hover {
   background: #f8fafc;
 }
 
+/* Кастомный кружок */
+
 .period-item input {
+  width: 22px;
+  height: 22px;
+  margin-right: 10px;
+  appearance: none;
+  -webkit-appearance: none;
+  border: 2px solid #cfd4dc;
+  border-radius: 50%;
+  background: transparent;
   cursor: pointer;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.period-item input:checked {
+  border-color: #14b8a6;
+}
+
+.period-item input:checked::after {
+  content: "";
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: #14b8a6;
+  border-radius: 50%;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.period-item input:disabled {
+  border-color: #cfd4dc;
+  background: transparent;
+  cursor: not-allowed;
+}
+
+.period-item span:first-of-type {
+  flex: 1;
+}
+
+.period-rate {
+  font-weight: 700;
+  color: #14b8a6;
+  min-width: 70px;
+  text-align: right;
+}
+
+/* Заблокированный период */
+
+.period-item.occupied {
+  background: #f3f4f6;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.period-item.occupied .period-rate {
+  color: #9ca3af;
+}
+
+.period-item.occupied input {
+  cursor: not-allowed;
+}
+
+/* Выбранный период */
+
+.period-item.selected {
+  border: 2px solid #14b8a6;
+  background: #ecfeff;
 }
 
 .create-button {
@@ -53,15 +129,20 @@
   border: none;
   border-radius: 12px;
   background: #14b8a6;
-  color: #fff;
+  color: white;
   font-size: 16px;
   font-weight: bold;
   cursor: pointer;
   transition: 0.2s;
 }
 
-.create-button:hover {
+.create-button:hover:not(:disabled) {
   background: #0f9e90;
+}
+
+.create-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 @media (max-width: 768px) {
@@ -71,12 +152,12 @@
   }
 
   .period-item {
-    padding: 12px;
     font-size: 15px;
   }
 
-  .create-button {
-    padding: 15px;
+  .period-rate {
+    min-width: 60px;
+    font-size: 14px;
   }
 }
 
@@ -87,6 +168,11 @@
 
   .period-item {
     font-size: 14px;
+  }
+
+  .period-rate {
+    min-width: 55px;
+    font-size: 13px;
   }
 
   .create-button {

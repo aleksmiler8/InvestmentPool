@@ -18,12 +18,22 @@ uint256 public totalDeposits;
 uint256 public totalInvestors;
 uint256 public accumulatedFees;
 
+mapping(Protocol => uint256) public protocolBalance;
+
     uint256 public constant DAY = 1 days;
     uint256 public constant WEEK = 7 days;
     uint256 public constant MONTH = 30 days;
     uint256 public constant THREE_MONTHS = 90 days;
     uint256 public constant SIX_MONTHS = 180 days;
     uint256 public constant YEAR = 365 days;
+
+    enum Protocol {
+    Pool,
+    Reserve,
+    Beefy,
+    Venus,
+    Pancake
+}
 
     struct Investment {
         uint256 amount;
@@ -34,6 +44,11 @@ uint256 public accumulatedFees;
         bool active;
         bool finished;
     }
+    struct PendingReserveFee {
+    uint256 amount;
+    uint256 unlockTime;
+    bool transferred;
+}
 
     struct Investor {
         bool exists;
@@ -44,6 +59,7 @@ uint256 public accumulatedFees;
     }
 
     mapping(address => Investor) private investors;
+    PendingReserveFee[] public pendingReserveFees;
 
     mapping(uint256 => uint256) public rewardRate;
     uint256 public earlyWithdrawFee = 1500; // 15%
@@ -160,6 +176,7 @@ for (uint256 i = 0; i < investor.investments.length; i++) {
 
         investor.totalInvested += amount;
         totalDeposits += amount;
+        protocolBalance[Protocol.Pool] += amount;
 
         emit Deposited(
             msg.sender,
@@ -226,16 +243,23 @@ for (uint256 i = 0; i < investor.investments.length; i++) {
     inv.finished = true;
 
     uint256 payout = inv.amount + inv.reward;
-    require(
+
+require(
     usdt.balanceOf(address(this)) >= payout,
     "Insufficient pool liquidity"
 );
 
-    investor.totalWithdrawn += payout;
-    investor.totalReward += inv.reward;
+require(
+    protocolBalance[Protocol.Pool] >= payout,
+    "Insufficient Pool balance"
+);
 
-    
-    usdt.safeTransfer(msg.sender, payout);
+protocolBalance[Protocol.Pool] -= payout;
+
+investor.totalWithdrawn += payout;
+investor.totalReward += inv.reward;
+
+usdt.safeTransfer(msg.sender, payout);
     
 
     emit Withdrawn(
@@ -267,16 +291,28 @@ function earlyWithdraw(uint256 investmentId)
 
     uint256 fee = (inv.amount * earlyWithdrawFee) / 10000;
     uint256 payout = inv.amount - fee;
-    accumulatedFees += fee;
+    pendingReserveFees.push(
+    PendingReserveFee({
+        amount: fee,
+        unlockTime: inv.endTime,
+        transferred: false
+    })
+);
     require(
     usdt.balanceOf(address(this)) >= payout,
     "Insufficient pool liquidity"
 );
 
-    investor.totalWithdrawn += payout;
+require(
+    protocolBalance[Protocol.Pool] >= payout,
+    "Insufficient Pool balance"
+);
 
-    
-        usdt.safeTransfer(msg.sender, payout);
+protocolBalance[Protocol.Pool] -= payout;
+
+investor.totalWithdrawn += payout;
+
+usdt.safeTransfer(msg.sender, payout);
     
 
     emit EarlyWithdraw(
@@ -322,11 +358,30 @@ function setRewardRate(
 
     emit EmergencyUnpaused();
 }
+function processPendingReserveFees()
+    public
+{
+    uint256 length = pendingReserveFees.length;
+
+    for (uint256 i = 0; i < length; i++) {
+
+        PendingReserveFee storage fee = pendingReserveFees[i];
+
+        if (
+            !fee.transferred &&
+            block.timestamp >= fee.unlockTime
+        ) {
+            accumulatedFees += fee.amount;
+            fee.transferred = true;
+        }
+    }
+}
 function withdrawAccumulatedFees(uint256 amount)
     external
     onlyOwner
     nonReentrant
 {
+    processPendingReserveFees();
     require(amount > 0, "Invalid amount");
     require(amount <= accumulatedFees, "Not enough accumulated fees");
 
@@ -357,6 +412,104 @@ function getInvestor(address user)
         investor.investments.length
     );
 }
+function allocateToProtocol(
+    Protocol protocol,
+    uint256 amount
+)
+    external
+    onlyOwner
+{
+    require(amount > 0, "Invalid amount");
+
+    require(
+        protocolBalance[Protocol.Pool] >= amount,
+        "Insufficient pool balance"
+    );
+
+    require(protocol != Protocol.Pool, "Cannot allocate to Pool");
+
+    protocolBalance[Protocol.Pool] -= amount;
+    protocolBalance[protocol] += amount;
+}
+    
+function transferBetweenProtocols(
+    Protocol from,
+    Protocol to,
+    uint256 amount
+)
+    external
+    onlyOwner
+{
+    require(from != to, "Same protocol");
+    require(amount > 0, "Invalid amount");
+
+    require(from != Protocol.Pool, "Invalid source protocol");
+require(to != Protocol.Pool, "Invalid destination protocol");
+
+require(
+    protocolBalance[from] >= amount,
+    "Insufficient protocol balance"
+);
+
+protocolBalance[from] -= amount;
+protocolBalance[to] += amount;
+}
+function returnToPool(
+    Protocol from,
+    uint256 amount
+)
+    external
+    onlyOwner
+{
+    require(from != Protocol.Pool, "Invalid source");
+    require(amount > 0, "Invalid amount");
+
+    require(
+        protocolBalance[from] >= amount,
+        "Insufficient balance"
+    );
+
+    protocolBalance[from] -= amount;
+    protocolBalance[Protocol.Pool] += amount;
+}
+function returnLiquidityToPool(uint256 amount)
+    external
+    onlyOwner
+{
+    require(amount > 0, "Invalid amount");
+
+    uint256 remaining = amount;
+
+    Protocol[4] memory sources = [
+        Protocol.Beefy,
+        Protocol.Venus,
+        Protocol.Pancake,
+        Protocol.Reserve
+    ];
+
+    for (uint256 i = 0; i < sources.length && remaining > 0; i++) {
+        uint256 balance = protocolBalance[sources[i]];
+
+        if (balance == 0) {
+            continue;
+        }
+
+        uint256 transferAmount = balance >= remaining
+            ? remaining
+            : balance;
+
+        protocolBalance[sources[i]] -= transferAmount;
+        protocolBalance[Protocol.Pool] += transferAmount;
+
+        remaining -= transferAmount;
+    }
+
+    require(
+        remaining == 0,
+        "Insufficient total protocol liquidity"
+    );
+}
+
 function setReserveWallet(address newWallet)
     external
     onlyOwner
