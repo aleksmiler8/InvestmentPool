@@ -194,9 +194,6 @@ const transferFunds = async () => {
       <p style={{ marginTop: "15px" }}>
   Active Protocols: <b>{activeProtocols} / {protocols.length}</b>
 </p>
-<p style={{ marginTop: "15px" }}>
-  Active Protocols: <b>{activeProtocols} / {protocols.length}</b>
-</p>
 
 <div
   style={{
