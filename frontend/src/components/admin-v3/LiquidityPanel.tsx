@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { ethers } from "ethers";
 import toast from "react-hot-toast";
 import { getContract } from "../../contracts/InvestmentPool";
+import { venusApiService } from "../../services/liquidity/adapters/venus/VenusApiService";
+import { beefyApiService } from "../../services/liquidity/adapters/beefy/BeefyApiService";
 type Props = {
   loadUser: () => Promise<void>;
   loadStatistics: () => Promise<void>;
@@ -52,6 +54,22 @@ const [protocolBalances, setProtocolBalances] = useState({
   Venus: "0",
   Pancake: "0",
 });
+
+const [protocolApy, setProtocolApy] = useState({
+  Pool: "-",
+  Reserve: "-",
+  Beefy: "-",
+  Venus: "-",
+  Pancake: "-",
+});
+
+const [protocolPool, setProtocolPool] = useState({
+  Pool: "-",
+  Reserve: "-",
+  Beefy: "-",
+  Venus: "-",
+  Pancake: "-",
+});
 const loadLiquidity = async () => {
   try {
     const contract = await getContract();
@@ -76,8 +94,54 @@ const loadLiquidity = async () => {
 
 useEffect(() => {
   loadLiquidity();
+  loadApy();
 }, []);
+const loadApy = async () => {
+  try {
+    const [markets, vaults] = await Promise.all([
+      venusApiService.getMarkets(),
+      beefyApiService.getVaults(),
+    ]);
 
+    // ---------- Venus ----------
+
+    const bestVenus = [...markets].sort(
+      (a, b) => b.supplyApy - a.supplyApy,
+    )[0];
+
+    if (bestVenus) {
+      setProtocolApy((prev) => ({
+        ...prev,
+        Venus: `${bestVenus.supplyApy.toFixed(2)}%`,
+      }));
+
+      setProtocolPool((prev) => ({
+        ...prev,
+        Venus: bestVenus.symbol.replace(/^v/, ""),
+      }));
+    }
+
+    // ---------- Beefy ----------
+
+    const bestBeefy = [...vaults]
+      .filter((vault) => vault.apy !== null)
+      .sort((a, b) => (b.apy ?? 0) - (a.apy ?? 0))[0];
+
+    if (bestBeefy) {
+      setProtocolApy((prev) => ({
+        ...prev,
+        Beefy: `${(bestBeefy.apy ?? 0).toFixed(2)}%`,
+      }));
+
+      setProtocolPool((prev) => ({
+        ...prev,
+        Beefy: bestBeefy.name,
+      }));
+    }
+  } catch (e) {
+    console.error("Failed to load APY:", e);
+  }
+};
 const allocateFunds = async () => {
   try {
     const contract = await getContract();
@@ -166,29 +230,49 @@ const transferFunds = async () => {
         }}
       >
         <thead>
-          <tr>
-            <th align="left">Protocol</th>
-            <th align="left">Status</th>
-            <th align="left">Allocation</th>
-          </tr>
-        </thead>
+  <tr>
+    <th align="left">Protocol</th>
+    <th align="left">Pool</th>
+    <th align="left">APY</th>
+    <th align="left">Status</th>
+    <th align="left">Allocation</th>
+  </tr>
+</thead>
 
         <tbody>
   {protocols.map((protocol) => (
     <tr key={protocol.id}>
       <td>{protocol.name}</td>
 
+      <td>
+        {
+          protocolPool[
+            protocol.name as keyof typeof protocolPool
+          ]
+        }
+      </td>
+
+      <td>
+        {
+          protocolApy[
+            protocol.name as keyof typeof protocolApy
+          ]
+        }
+      </td>
+
       <td>🟢 Connected</td>
 
       <td>
-  {protocolBalances[
-    protocol.name as keyof typeof protocolBalances
-  ]}{" "}
-  USDT
-</td>
+        {
+          protocolBalances[
+            protocol.name as keyof typeof protocolBalances
+          ]
+        }{" "}
+        USDT
+      </td>
     </tr>
   ))}
-        </tbody>
+</tbody>
       </table>
 
       <p style={{ marginTop: "15px" }}>

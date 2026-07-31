@@ -1,58 +1,24 @@
-export class PancakeAdapter
-{
-  async getInfo() {
-    return {
-      id: "pancakeswap",
+import { pancakeApiService } from "./PancakeApiService";
+import type { PancakePool } from "./types";
 
-      name: "PancakeSwap",
-
-      network: "bsc",
-
-      status: "active",
-
-      supportedAssets: [],
-
-      supportedOperations: [
-        "deposit",
-        "withdraw",
-      ],
-
-      version: "1.0",
-
-      lastUpdated: new Date(),
-    };
+export class PancakeAdapter {
+  async getPools(): Promise<PancakePool[]> {
+    return pancakeApiService.getPools();
   }
 
-  async healthCheck() {
-    return true;
+  async getPool(id: string): Promise<PancakePool | null> {
+    const pools = await this.getPools();
+    return pools.find(pool => pool.id === id) ?? null;
   }
 
-  async getBalance() {
-    return 0n;
+  async isAvailable(): Promise<boolean> {
+    try {
+      await this.getPools();
+      return true;
+    } catch {
+      return false;
+    }
   }
-
-  async getMarkets() {
-    return [];
-  }
-
-  async getApy() {
-    return {};
-  }
-
-  async deposit(
-  _asset: string,
-  _amount: bigint,
-): Promise<string> {
-  throw new Error("Not implemented");
 }
 
-  async withdraw(
- _asset: string,
-  _amount: bigint,
-): Promise<string> {
-  throw new Error("Not implemented");
-}
-}
-
-export const pancakeAdapter =
-  new PancakeAdapter();
+export const pancakeAdapter = new PancakeAdapter();
