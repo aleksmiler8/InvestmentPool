@@ -1,7 +1,7 @@
 import express from "express";
 import cors from "cors";
 import axios from "axios";
-import pancakeRouter from "./routes/pancake";
+import pancakeRouter from "./routes/pancakeswap";
 import beefyRoutes from "./routes/beefy";
 
 const app = express();

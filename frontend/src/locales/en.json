@@ -18,7 +18,7 @@
   "finished": "Finished",
   "withdraw": "Withdraw",
   "actions": "Actions",
-  "enterAmount": "Enter USDT amount",
+  "enterAmount": "Minimum 100 USDT",
   "createInvestment": "Create investment",
   "successWithdraw": "Funds withdrawn successfully!",
   "successDeposit": "Investment created successfully!",

@@ -18,7 +18,7 @@
   "finished": "Завершена",
   "withdraw": "Вивести",
   "actions": "Дії",
-  "enterAmount": "Введіть суму USDT",
+  "enterAmount": "Minimum 100 USDT",
   "createInvestment": "Створити інвестицію",
   "successWithdraw": "Кошти успішно виведено!",
   "successDeposit": "Інвестицію успішно створено!",

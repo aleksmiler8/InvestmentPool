@@ -18,7 +18,7 @@
   "finished": "Zakończona",
   "withdraw": "Wypłać",
   "actions": "Akcje",
-  "enterAmount": "Wprowadź kwotę USDT",
+  "enterAmount": "Minimum 100 USDT",
   "createInvestment": "Utwórz inwestycję",
   "successWithdraw": "Środki zostały pomyślnie wypłacone!",
   "successDeposit": "Inwestycja została utworzona!",

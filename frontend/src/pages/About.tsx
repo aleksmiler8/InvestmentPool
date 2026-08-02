@@ -1,7 +1,9 @@
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 export default function About() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   return (
     <div
@@ -45,7 +47,7 @@ export default function About() {
             marginBottom: "8px",
           }}
         >
-          About Investment Pool
+          {t("about_title")}
         </h2>
 
         <p
@@ -56,21 +58,19 @@ export default function About() {
             marginBottom: "35px",
           }}
         >
-          Smart Blockchain Investment Platform
+          {t("about_subtitle")}
         </p>
 
         <h3 style={{ color: "#16b6b6" }}>
-          О платформе
+          {t("about_platform")}
         </h3>
 
         <p style={{ lineHeight: "1.8" }}>
-          Investment Pool — это децентрализованная инвестиционная
-          платформа, работающая на блокчейне BNB Smart Chain.
+          {t("about_platform_text1")}
         </p>
 
         <p style={{ lineHeight: "1.8" }}>
-          Платформа использует смарт-контракт для автоматического
-          выполнения всех инвестиционных операций без участия третьих лиц.
+          {t("about_platform_text2")}
         </p>
 
         <hr
@@ -82,20 +82,16 @@ export default function About() {
         />
 
         <h3 style={{ color: "#16b6b6" }}>
-          Основные принципы
+          {t("about_principles")}
         </h3>
 
-        <p>✔ Все инвестиции управляются смарт-контрактом.</p>
+        <p>✔ {t("about.principle1")}</p>
 
-        <p>✔ Все операции записываются в блокчейн и являются прозрачными.</p>
+        <p>✔ {t("about_principle2")}</p>
 
-        <p>
-          ✔ Вознаграждение рассчитывается автоматически в соответствии с выбранным инвестиционным периодом.
-        </p>
+        <p>✔ {t("about_principle3")}</p>
 
-        <p>
-          ✔ Пользователь полностью контролирует свои средства с помощью собственного криптовалютного кошелька.
-        </p>
+        <p>✔ {t("about_principle4")}</p>
 
         <hr
           style={{
@@ -106,22 +102,14 @@ export default function About() {
         />
 
         <h3 style={{ color: "#16b6b6" }}>
-          Безопасность
+          {t("about_security")}
         </h3>
 
-        <p>
-          Investment Pool не хранит средства пользователей.
-        </p>
+        <p>{t("about_security_text1")}</p>
 
-        <p>
-          Платформа не имеет доступа к приватным ключам,
-          seed-фразам или средствам пользователей.
-        </p>
+        <p>{t("about_security_text2")}</p>
 
-        <p>
-          Все транзакции подтверждаются владельцем кошелька и
-          выполняются напрямую через смарт-контракт.
-        </p>
+        <p>{t("about_security_text3")}</p>
 
         <hr
           style={{
@@ -132,15 +120,13 @@ export default function About() {
         />
 
         <h3 style={{ color: "#16b6b6" }}>
-          Наша цель
+          {t("about_goal")}
         </h3>
 
         <p style={{ lineHeight: "1.8" }}>
-          Создать простую, прозрачную и безопасную инвестиционную платформу,
-          основанную на технологии блокчейн.
+          {t("about_goal_text")}
         </p>
-
-        <button
+                <button
           onClick={() => navigate(-1)}
           style={{
             marginTop: "40px",
@@ -155,7 +141,7 @@ export default function About() {
             cursor: "pointer",
           }}
         >
-          ← Назад
+          {t("back")}
         </button>
 
         <p

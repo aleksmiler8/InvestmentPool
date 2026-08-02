@@ -128,16 +128,18 @@ const loadApy = async () => {
       .sort((a, b) => (b.apy ?? 0) - (a.apy ?? 0))[0];
 
     if (bestBeefy) {
-      setProtocolApy((prev) => ({
-        ...prev,
-        Beefy: `${(bestBeefy.apy ?? 0).toFixed(2)}%`,
-      }));
+  console.log("Best Beefy:", bestBeefy);
 
-      setProtocolPool((prev) => ({
-        ...prev,
-        Beefy: bestBeefy.name,
-      }));
-    }
+  setProtocolApy((prev) => ({
+    ...prev,
+    Beefy: `${(bestBeefy.apy ?? 0).toFixed(2)}%`,
+  }));
+
+  setProtocolPool((prev) => ({
+    ...prev,
+    Beefy: bestBeefy.name,
+  }));
+}
   } catch (e) {
     console.error("Failed to load APY:", e);
   }
@@ -206,6 +208,30 @@ const transferFunds = async () => {
     console.error(e);
     toast.error("Transfer failed");
   }
+};
+const processReserveFees = async () => {
+  try {
+    const contract = await getContract();
+
+    const tx = await contract.processReserveFees();
+
+    await tx.wait();
+
+    toast.success("Reserve fees processed");
+
+    await loadUser();
+    await loadStatistics();
+    await loadLiquidity();
+  } catch (e: any) {
+  console.error(e);
+
+  toast.error(
+    e?.shortMessage ||
+    e?.reason ||
+    e?.message ||
+    "Process failed"
+  );
+}
 };
 
   const activeProtocols = protocols.length;
@@ -284,6 +310,7 @@ const transferFunds = async () => {
     display: "flex",
     gap: "12px",
     marginTop: "20px",
+    flexWrap: "wrap",
   }}
 >
   <button
@@ -296,6 +323,12 @@ const transferFunds = async () => {
     onClick={() => setShowTransferModal(true)}
   >
     Transfer
+  </button>
+
+  <button
+    onClick={processReserveFees}
+  >
+    Process Reserve Fees
   </button>
 </div>
     {showAllocateModal && (

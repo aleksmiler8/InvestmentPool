@@ -18,7 +18,7 @@
   "finished": "Tamamlandı",
   "withdraw": "Çek",
   "actions": "İşlemler",
-  "enterAmount": "USDT miktarını girin",
+  "enterAmount": "Minimum 100 USDT",
   "createInvestment": "Yatırım oluştur",
   "successWithdraw": "Fonlar başarıyla çekildi!",
   "successDeposit": "Yatırım başarıyla oluşturuldu!",

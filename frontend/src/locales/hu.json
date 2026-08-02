@@ -18,7 +18,7 @@
   "finished": "Lezárva",
   "withdraw": "Kifizetés",
   "actions": "Műveletek",
-  "enterAmount": "Adja meg az USDT összeget",
+  "enterAmount": "Minimum 100 USDT",
   "createInvestment": "Befektetés létrehozása",
   "successWithdraw": "A pénzeszközök sikeresen kifizetve!",
   "successDeposit": "A befektetés sikeresen létrejött!",
