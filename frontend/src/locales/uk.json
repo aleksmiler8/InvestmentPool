@@ -17,6 +17,8 @@
   "active": "Активна",
   "finished": "Завершена",
   "withdraw": "Вивести",
+  "claim": "Отримати",
+"earlyWithdraw": "Дострокове виведення",
   "actions": "Дії",
   "enterAmount": "Minimum 100 USDT",
   "createInvestment": "Створити інвестицію",
@@ -61,6 +63,21 @@
 "about_goal": "Наша мета",
 
 "about_goal_text": "Створити просту, прозору та безпечну інвестиційну платформу на основі технології блокчейн.",
+"rules": {
+  "rule1": "Diese Regeln sind für alle Benutzer ohne Ausnahme verbindlich.",
+  "rule2": "Investitionen erfolgen freiwillig und nach eigenem Ermessen des Benutzers.",
+  "rule3": "Die Vergütung wird erst nach Ablauf des gewählten Investitionszeitraums gutgeschrieben.",
+  "rule4": "Bei einer vorzeitigen Auszahlung verliert der Benutzer sämtliche angesammelten Gewinne und zahlt eine Gebühr von 15 % des Investitionsbetrags.",
+  "rule5": "Alle Vorgänge werden automatisch vom Smart Contract ausgeführt und in der Blockchain gespeichert.",
+  "rule6": "Nach der Bestätigung einer Transaktion kann diese nicht mehr rückgängig gemacht werden.",
+  "rule7": "Vor jeder Transaktion muss der Benutzer sicherstellen, dass sich genügend BNB in seiner Wallet befindet, um die Netzwerkgebühr der BNB Smart Chain zu bezahlen.",
+  "rule8": "Mit der Nutzung der Plattform bestätigt der Benutzer, dass er diese Regeln vollständig gelesen und akzeptiert hat.",
 
-"back": "← Назад"
+  "info1": "Investment Pool speichert keine Gelder der Benutzer.",
+  "info2": "Alle Vorgänge werden direkt zwischen Ihrer Kryptowallet und dem Smart Contract ausgeführt.",
+  "info3": "Die Plattform hat keinen Zugriff auf Ihre privaten Schlüssel, Seed-Phrasen oder Ihr Guthaben."
+},
+"back": "← Назад",
+"welcome": "Ласкаво просимо",
+"welcome_text": "Перед використанням платформи виберіть мову та ознайомтеся з правилами."
 }

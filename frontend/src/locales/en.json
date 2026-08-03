@@ -17,6 +17,8 @@
   "active": "Active",
   "finished": "Finished",
   "withdraw": "Withdraw",
+  "claim": "Claim",
+"earlyWithdraw": "Early Withdrawal",
   "actions": "Actions",
   "enterAmount": "Minimum 100 USDT",
   "createInvestment": "Create investment",
@@ -63,5 +65,20 @@
 
 "about_goal_text": "To create a simple, transparent, and secure investment platform based on blockchain technology.",
 
-"back": "← Back"
+"rules": {
+  "rule1": "These rules are mandatory for all users without exception.",
+  "rule2": "Investments are made voluntarily and at the user's own discretion.",
+  "rule3": "Rewards are credited only after the selected investment period has ended.",
+  "rule4": "In case of an early withdrawal, the user forfeits all accrued rewards and pays a 15% fee on the investment amount.",
+  "rule5": "All operations are executed automatically by the smart contract and recorded on the blockchain.",
+  "rule6": "Once a transaction has been confirmed, it cannot be cancelled.",
+  "rule7": "Before performing any operation, the user must ensure that there is enough BNB in the wallet to pay the BNB Smart Chain network fee.",
+  "rule8": "By using the platform, the user confirms that they have fully read and accepted these rules.",
+
+  "info1": "Investment Pool does not store users' funds.",
+  "info2": "All operations are performed directly between your cryptocurrency wallet and the smart contract.",
+  "info3": "The platform has no access to your private keys, seed phrases, or funds."
+},
+"back": "← Back",
+"welcome_text": "Before using the platform, choose your language and read the platform rules."
 }

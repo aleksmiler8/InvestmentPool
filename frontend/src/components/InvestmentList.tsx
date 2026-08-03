@@ -66,7 +66,9 @@ export default function InvestmentList({
 
             <p>
               <b>{t("remaining")}:</b>{" "}
-              {finished ? "0 days" : `${remainingDays} days`}
+              {finished
+  ? `0 ${t("days")}`
+  : `${remainingDays} ${t("days")}`}
             </p>
 
             <div className="progress">

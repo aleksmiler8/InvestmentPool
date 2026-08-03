@@ -17,6 +17,8 @@
   "active": "Aktív",
   "finished": "Lezárva",
   "withdraw": "Kifizetés",
+ "claim": "Kifizetés",
+"earlyWithdraw": "Korai kivonás", 
   "actions": "Műveletek",
   "enterAmount": "Minimum 100 USDT",
   "createInvestment": "Befektetés létrehozása",
@@ -61,6 +63,21 @@
 "about_goal": "Célunk",
 
 "about_goal_text": "Egyszerű, átlátható és biztonságos, blokklánc-technológián alapuló befektetési platform létrehozása.",
+"rules": {
+  "rule1": "Ezek a szabályok kivétel nélkül minden felhasználóra kötelezőek.",
+  "rule2": "A befektetések önkéntesen és a felhasználó saját döntése alapján történnek.",
+  "rule3": "A jutalom csak a kiválasztott befektetési időszak lejárta után kerül jóváírásra.",
+  "rule4": "Korai kivonás esetén a felhasználó elveszíti az összes felhalmozott nyereséget, és a befektetés összegének 15%-át díjként fizeti meg.",
+  "rule5": "Minden műveletet a smart contract automatikusan hajt végre, és a blokkláncon kerül rögzítésre.",
+  "rule6": "A tranzakció megerősítése után az nem vonható vissza.",
+  "rule7": "Bármilyen művelet előtt a felhasználónak meg kell győződnie arról, hogy elegendő BNB áll rendelkezésére a tárcájában a BNB Smart Chain hálózati díjának kifizetéséhez.",
+  "rule8": "A platform használatával a felhasználó megerősíti, hogy teljes mértékben elolvasta és elfogadta ezeket a szabályokat.",
 
-"back": "← Vissza"
+  "info1": "Az Investment Pool nem tárolja a felhasználók pénzeszközeit.",
+  "info2": "Minden művelet közvetlenül az Ön kriptotárcája és a smart contract között történik.",
+  "info3": "A platform nem fér hozzá az Ön privát kulcsaihoz, seed phrase-éhez vagy pénzeszközeihez."
+},
+"back": "← Vissza",
+"welcome": "Üdvözöljük",
+"welcome_text": "A platform használata előtt válasszon nyelvet, és olvassa el a platform szabályait."
 }

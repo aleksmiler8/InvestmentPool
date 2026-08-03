@@ -17,6 +17,8 @@
   "active": "Activa",
   "finished": "Finalizada",
   "withdraw": "Retirar",
+  "claim": "Retirar",
+"earlyWithdraw": "Retiro anticipado",
   "actions": "Acciones",
   "enterAmount": "Minimum 100 USDT",
   "createInvestment": "Crear inversión",
@@ -61,6 +63,21 @@
 "about_goal": "Nuestro objetivo",
 
 "about_goal_text": "Crear una plataforma de inversión simple, transparente y segura basada en la tecnología blockchain.",
+"rules": {
+  "rule1": "Estas reglas son obligatorias para todos los usuarios sin excepción.",
+  "rule2": "Las inversiones se realizan de forma voluntaria y a discreción del usuario.",
+  "rule3": "La recompensa se acredita únicamente después de finalizar el período de inversión seleccionado.",
+  "rule4": "En caso de retiro anticipado, el usuario pierde todas las ganancias acumuladas y paga una comisión del 15% sobre el importe de la inversión.",
+  "rule5": "Todas las operaciones son ejecutadas automáticamente por el contrato inteligente y registradas en la blockchain.",
+  "rule6": "Una vez confirmada una transacción, no puede cancelarse.",
+  "rule7": "Antes de realizar cualquier operación, el usuario debe asegurarse de tener suficiente BNB en su billetera para pagar la comisión de la red BNB Smart Chain.",
+  "rule8": "Al utilizar la plataforma, el usuario confirma que ha leído y aceptado completamente estas reglas.",
 
-"back": "← Volver"
+  "info1": "Investment Pool no almacena los fondos de los usuarios.",
+  "info2": "Todas las operaciones se realizan directamente entre su billetera de criptomonedas y el contrato inteligente.",
+  "info3": "La plataforma no tiene acceso a sus claves privadas, frases semilla ni fondos."
+},
+"back": "← Volver",
+"welcome": "Bienvenido",
+"welcome_text": "Antes de utilizar la plataforma, seleccione un idioma y lea las reglas de la plataforma."
 }

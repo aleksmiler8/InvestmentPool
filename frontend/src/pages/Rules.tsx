@@ -9,6 +9,22 @@ type RulesProps = {
 export default function Rules({ onContinue }: RulesProps) {
   const [accepted, setAccepted] = useState(false);
   const { t } = useTranslation();
+  const rules = [
+  t("rules.rule1"),
+  t("rules.rule2"),
+  t("rules.rule3"),
+  t("rules.rule4"),
+  t("rules.rule5"),
+  t("rules.rule6"),
+  t("rules.rule7"),
+  t("rules.rule8"),
+];
+
+const info = [
+  t("rules.info1"),
+  t("rules.info2"),
+  t("rules.info3"),
+];
 
   return (
     <div
@@ -72,49 +88,11 @@ export default function Rules({ onContinue }: RulesProps) {
             lineHeight: "1.8",
           }}
         >
-          <p>
-            <strong>1.</strong> Настоящие правила обязательны для
-            <strong> всех пользователей без исключения.</strong>
-          </p>
-
-          <p>
-            <strong>2.</strong> Инвестирование осуществляется пользователем
-            добровольно и на собственное усмотрение.
-          </p>
-
-          <p>
-            <strong>3.</strong> Вознаграждение начисляется только после
-            окончания выбранного инвестиционного периода.
-          </p>
-
-          <p>
-            <strong>4.</strong> При досрочном выводе инвестиции пользователь:
-          </p>
-
-          <ul>
-            <li>теряет всю начисленную прибыль;</li>
-            <li>оплачивает комиссию 15% от суммы инвестиции.</li>
-          </ul>
-
-          <p>
-            <strong>5.</strong> Все операции выполняются автоматически
-            смарт-контрактом и записываются в блокчейн.
-          </p>
-                    <p>
-            <strong>6.</strong> После подтверждения транзакции отменить её
-            невозможно.
-          </p>
-
-          <p>
-            <strong>7.</strong> Перед выполнением любой операции пользователь
-            обязан убедиться, что на его кошельке достаточно <strong>BNB</strong>
-            {" "}для оплаты комиссии сети BNB Smart Chain.
-          </p>
-
-          <p>
-            <strong>8.</strong> Используя платформу, пользователь подтверждает,
-            что полностью ознакомился с настоящими правилами и принимает их.
-          </p>
+          {rules.map((rule, index) => (
+  <p key={index}>
+    <strong>{index + 1}.</strong> {rule}
+  </p>
+))}
         </div>
 
         <div
@@ -131,16 +109,14 @@ export default function Rules({ onContinue }: RulesProps) {
         >
           <strong>{t("information")}</strong>
 
-          <p style={{ marginTop: "10px" }}>
-            Investment Pool не хранит средства пользователей.
-            Все операции выполняются напрямую между вашим
-            криптовалютным кошельком и смарт-контрактом.
-          </p>
-
-          <p>
-            Платформа не имеет доступа к вашим приватным ключам,
-            seed-фразам или средствам на вашем кошельке.
-          </p>
+          {info.map((text, index) => (
+  <p
+    key={index}
+    style={index === 0 ? { marginTop: "10px" } : undefined}
+  >
+    {text}
+  </p>
+))}
         </div>
 
         <div

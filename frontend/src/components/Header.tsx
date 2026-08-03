@@ -1,6 +1,7 @@
 import LanguageSelector from "./LanguageSelector";
 import WalletButton from "./WalletButton";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 type HeaderProps = {
   wallet: string;
@@ -14,6 +15,7 @@ export default function Header({
   usdtBalance,
 }: HeaderProps) {
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const shortWallet =
     wallet && wallet.length > 10
@@ -140,7 +142,7 @@ export default function Header({
               padding: "6px 0",
             }}
           >
-            About
+            {t("about_platform")}
           </button>
         </div>
       </div>

@@ -17,6 +17,8 @@
   "active": "Aktif",
   "finished": "Tamamlandı",
   "withdraw": "Çek",
+  "claim": "Al",
+"earlyWithdraw": "Erken çekim",
   "actions": "İşlemler",
   "enterAmount": "Minimum 100 USDT",
   "createInvestment": "Yatırım oluştur",
@@ -93,6 +95,21 @@
 "about_goal": "Hedefimiz",
 
 "about_goal_text": "Blockchain teknolojisine dayalı basit, şeffaf ve güvenli bir yatırım platformu oluşturmak.",
+"rules": {
+  "rule1": "Bu kurallar istisnasız tüm kullanıcılar için zorunludur.",
+  "rule2": "Yatırımlar tamamen gönüllü olarak ve kullanıcının kendi takdirine bağlı şekilde yapılır.",
+  "rule3": "Ödül yalnızca seçilen yatırım süresi sona erdikten sonra hesaplanır.",
+  "rule4": "Erken çekim durumunda kullanıcı biriken tüm kazançlarını kaybeder ve yatırım tutarının %15'i oranında komisyon öder.",
+  "rule5": "Tüm işlemler akıllı sözleşme tarafından otomatik olarak gerçekleştirilir ve blok zincirine kaydedilir.",
+  "rule6": "Bir işlem onaylandıktan sonra iptal edilemez.",
+  "rule7": "Herhangi bir işlem yapmadan önce kullanıcı, BNB Smart Chain ağ ücretini ödemek için cüzdanında yeterli miktarda BNB bulunduğundan emin olmalıdır.",
+  "rule8": "Platformu kullanan kullanıcı, bu kuralları tamamen okuduğunu ve kabul ettiğini onaylar.",
 
-"back": "← Geri"
+  "info1": "Investment Pool kullanıcı fonlarını saklamaz.",
+  "info2": "Tüm işlemler doğrudan kripto cüzdanınız ile akıllı sözleşme arasında gerçekleştirilir.",
+  "info3": "Platformun özel anahtarlarınıza, seed ifadelerinize veya fonlarınıza erişimi yoktur."
+},
+"back": "← Geri",
+"welcome": "Hoş Geldiniz",
+"welcome_text": "Platformayı kullanmadan önce lütfen dilinizi seçin ve platform kurallarını okuyun."
 }

@@ -1,8 +1,10 @@
 import { useNavigate } from "react-router-dom";
 import LanguageSelector from "../components/LanguageSelector";
+import { useTranslation } from "react-i18next";
 
 export default function Welcome() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   return (
     <div
@@ -36,7 +38,7 @@ export default function Welcome() {
   Investment Pool
 </h2>
 
-        <h3>Добро пожаловать</h3>
+        <h3>{t("welcome")}</h3>
         <p
   style={{
     color: "#555",
@@ -49,8 +51,8 @@ export default function Welcome() {
 </p>
 
         <p>
-          Перед использованием платформы выберите язык и ознакомьтесь с правилами.
-        </p>
+  {t("welcome_text")}
+</p>
         <div
   style={{
     textAlign: "left",
@@ -94,7 +96,7 @@ export default function Welcome() {
             fontWeight: "bold",
           }}
         >
-          Продолжить
+          {t("continue")}
         </button>
 
         <p
