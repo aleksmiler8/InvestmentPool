@@ -254,16 +254,16 @@ for (uint256 i = 0; i < investor.investments.length; i++) {
 
     uint256 payout = inv.amount + inv.reward;
 
-require(
-    usdt.balanceOf(address(this)) >= payout,
-    "Insufficient pool liquidity"
-);
-
 if (protocolBalance[Protocol.Pool] < payout) {
     _returnLiquidityToPool(
         payout - protocolBalance[Protocol.Pool]
     );
 }
+
+require(
+    usdt.balanceOf(address(this)) >= payout,
+    "Insufficient pool liquidity"
+);
 
 require(
     protocolBalance[Protocol.Pool] >= payout,
@@ -318,12 +318,6 @@ function earlyWithdraw(uint256 investmentId)
     usdt.balanceOf(address(this)) >= payout,
     "Insufficient pool liquidity"
 );
-
-if (protocolBalance[Protocol.Pool] < payout) {
-    _returnLiquidityToPool(
-        payout - protocolBalance[Protocol.Pool]
-    );
-}
 
 require(
     protocolBalance[Protocol.Pool] >= payout,

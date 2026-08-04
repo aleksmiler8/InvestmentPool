@@ -209,6 +209,38 @@ const transferFunds = async () => {
     toast.error("Transfer failed");
   }
 };
+const returnToPool = async () => {
+  try {
+    const contract = await getContract();
+
+    const protocolMap: Record<string, number> = {
+      Beefy: 2,
+      Venus: 3,
+      Pancake: 4,
+    };
+
+    const tx = await contract.returnToPool(
+      protocolMap[fromProtocol],
+      ethers.parseUnits(amount || "0", 18)
+    );
+
+    await tx.wait();
+
+    toast.success("Funds returned to Pool");
+
+    setAmount("");
+    setFromProtocol("Venus");
+    setShowTransferModal(false);
+
+    await loadUser();
+    await loadStatistics();
+    await loadLiquidity();
+
+  } catch (e) {
+    console.error(e);
+    toast.error("Return failed");
+  }
+};
 const processReserveFees = async () => {
   try {
     const contract = await getContract();
@@ -515,12 +547,16 @@ const processReserveFees = async () => {
         }}
       >
         <button onClick={() => setShowTransferModal(false)}>
-          Cancel
-        </button>
+  Cancel
+</button>
 
-        <button onClick={transferFunds}>
-          Transfer
-        </button>
+<button onClick={returnToPool}>
+  Return to Pool
+</button>
+
+<button onClick={transferFunds}>
+  Transfer
+</button>
       </div>
     </div>
   </div>
