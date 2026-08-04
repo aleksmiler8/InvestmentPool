@@ -101,17 +101,17 @@ useEffect(() => {
   loadLiquidity();
   loadApy();
 }, []);
-const loadApy = async () => {
-  try {
-    const [markets, vaults, pools] = await Promise.all([
-      venusApiService.getMarkets(),
-      beefyApiService.getVaults(),
-      pancakeApiService.getPools(),
-    ]);
+   const loadApy = async () => {
+  const [markets, vaults, pools] = await Promise.allSettled([
+    venusApiService.getMarkets(),
+    beefyApiService.getVaults(),
+    pancakeApiService.getPools(),
+  ]);
 
-    // ---------- Venus ----------
+  // ---------- Venus ----------
 
-    const bestVenus = [...markets].sort(
+  if (markets.status === "fulfilled") {
+    const bestVenus = [...markets.value].sort(
       (a, b) => b.supplyApy - a.supplyApy
     )[0];
 
@@ -126,16 +126,18 @@ const loadApy = async () => {
         Venus: bestVenus.symbol.replace(/^v/, ""),
       }));
     }
+  } else {
+    console.error("Venus error:", markets.reason);
+  }
 
-    // ---------- Beefy ----------
+  // ---------- Beefy ----------
 
-    const bestBeefy = [...vaults]
+  if (vaults.status === "fulfilled") {
+    const bestBeefy = [...vaults.value]
       .filter((vault) => vault.apy !== null)
       .sort((a, b) => (b.apy ?? 0) - (a.apy ?? 0))[0];
 
     if (bestBeefy) {
-      console.log("Best Beefy:", bestBeefy);
-
       setProtocolApy((prev) => ({
         ...prev,
         Beefy: `${(bestBeefy.apy ?? 0).toFixed(2)}%`,
@@ -146,10 +148,14 @@ const loadApy = async () => {
         Beefy: bestBeefy.name,
       }));
     }
+  } else {
+    console.error("Beefy error:", vaults.reason);
+  }
 
-    // ---------- Pancake ----------
+  // ---------- Pancake ----------
 
-    const bestPool = [...pools]
+  if (pools.status === "fulfilled") {
+    const bestPool = [...pools.value]
       .sort((a, b) => b.tvl - a.tvl)[0];
 
     if (bestPool) {
@@ -158,16 +164,13 @@ const loadApy = async () => {
         Pancake: bestPool.pair,
       }));
 
-      // Пока API Pancake не отдаёт APY.
-      // Поэтому временно показываем TVL.
       setProtocolApy((prev) => ({
         ...prev,
         Pancake: `TVL $${bestPool.tvl.toLocaleString()}`,
       }));
     }
-
-  } catch (e) {
-    console.error("Failed to load APY:", e);
+  } else {
+    console.error("Pancake error:", pools.reason);
   }
 };
 const allocateFunds = async () => {
