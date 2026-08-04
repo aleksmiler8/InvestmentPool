@@ -2,8 +2,10 @@ import { useEffect, useState } from "react";
 import { ethers } from "ethers";
 import toast from "react-hot-toast";
 import { getContract } from "../../contracts/InvestmentPool";
+import { getUSDT } from "../../contracts/USDT";
 import { venusApiService } from "../../services/liquidity/adapters/venus/VenusApiService";
 import { beefyApiService } from "../../services/liquidity/adapters/beefy/BeefyApiService";
+import { pancakeApiService } from "../../services/liquidity/adapters/pancakeswap/PancakeApiService";
 type Props = {
   loadUser: () => Promise<void>;
   loadStatistics: () => Promise<void>;
@@ -73,12 +75,15 @@ const [protocolPool, setProtocolPool] = useState({
 const loadLiquidity = async () => {
   try {
     const contract = await getContract();
+const usdt = await getUSDT();
 
-    const pool = await contract.protocolBalance(0);
-    const reserve = await contract.protocolBalance(1);
-    const beefy = await contract.protocolBalance(2);
-    const venus = await contract.protocolBalance(3);
-    const pancake = await contract.protocolBalance(4);
+const reserveWallet = await contract.reserveWallet();
+
+const pool = await contract.protocolBalance(0);
+const reserve = await usdt.balanceOf(reserveWallet);
+const beefy = await contract.protocolBalance(2);
+const venus = await contract.protocolBalance(3);
+const pancake = await contract.protocolBalance(4);
 
     setProtocolBalances({
       Pool: ethers.formatUnits(pool, 18),
@@ -98,15 +103,16 @@ useEffect(() => {
 }, []);
 const loadApy = async () => {
   try {
-    const [markets, vaults] = await Promise.all([
+    const [markets, vaults, pools] = await Promise.all([
       venusApiService.getMarkets(),
       beefyApiService.getVaults(),
+      pancakeApiService.getPools(),
     ]);
 
     // ---------- Venus ----------
 
     const bestVenus = [...markets].sort(
-      (a, b) => b.supplyApy - a.supplyApy,
+      (a, b) => b.supplyApy - a.supplyApy
     )[0];
 
     if (bestVenus) {
@@ -128,18 +134,38 @@ const loadApy = async () => {
       .sort((a, b) => (b.apy ?? 0) - (a.apy ?? 0))[0];
 
     if (bestBeefy) {
-  console.log("Best Beefy:", bestBeefy);
+      console.log("Best Beefy:", bestBeefy);
 
-  setProtocolApy((prev) => ({
-    ...prev,
-    Beefy: `${(bestBeefy.apy ?? 0).toFixed(2)}%`,
-  }));
+      setProtocolApy((prev) => ({
+        ...prev,
+        Beefy: `${(bestBeefy.apy ?? 0).toFixed(2)}%`,
+      }));
 
-  setProtocolPool((prev) => ({
-    ...prev,
-    Beefy: bestBeefy.name,
-  }));
-}
+      setProtocolPool((prev) => ({
+        ...prev,
+        Beefy: bestBeefy.name,
+      }));
+    }
+
+    // ---------- Pancake ----------
+
+    const bestPool = [...pools]
+      .sort((a, b) => b.tvl - a.tvl)[0];
+
+    if (bestPool) {
+      setProtocolPool((prev) => ({
+        ...prev,
+        Pancake: bestPool.pair,
+      }));
+
+      // Пока API Pancake не отдаёт APY.
+      // Поэтому временно показываем TVL.
+      setProtocolApy((prev) => ({
+        ...prev,
+        Pancake: `TVL $${bestPool.tvl.toLocaleString()}`,
+      }));
+    }
+
   } catch (e) {
     console.error("Failed to load APY:", e);
   }
@@ -175,7 +201,6 @@ const allocateFunds = async () => {
     toast.error("Allocation failed");
   }
 };
-
 const transferFunds = async () => {
   try {
     const contract = await getContract();
@@ -207,6 +232,38 @@ const transferFunds = async () => {
   } catch (e) {
     console.error(e);
     toast.error("Transfer failed");
+  }
+};
+const returnToPool = async () => {
+  try {
+    const contract = await getContract();
+
+    const protocolMap: Record<string, number> = {
+      Beefy: 2,
+      Venus: 3,
+      Pancake: 4,
+    };
+
+    const tx = await contract.returnToPool(
+      protocolMap[fromProtocol],
+      ethers.parseUnits(amount || "0", 18)
+    );
+
+    await tx.wait();
+
+    toast.success("Funds returned to Pool");
+
+    setAmount("");
+    setFromProtocol("Venus");
+    setShowTransferModal(false);
+
+    await loadUser();
+    await loadStatistics();
+    await loadLiquidity();
+
+  } catch (e) {
+    console.error(e);
+    toast.error("Return failed");
   }
 };
 const processReserveFees = async () => {
@@ -515,12 +572,16 @@ const processReserveFees = async () => {
         }}
       >
         <button onClick={() => setShowTransferModal(false)}>
-          Cancel
-        </button>
+  Cancel
+</button>
 
-        <button onClick={transferFunds}>
-          Transfer
-        </button>
+<button onClick={returnToPool}>
+  Return to Pool
+</button>
+
+<button onClick={transferFunds}>
+  Transfer
+</button>
       </div>
     </div>
   </div>
