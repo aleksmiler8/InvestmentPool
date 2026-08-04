@@ -27,23 +27,37 @@ export class MarketDataService {
       return this.refreshPromise;
     }
 
-    this.refreshPromise = (async () => {
+   this.refreshPromise = (async () => {
   try {
-    const [venusMarkets, pancakePools, beefyVaults] = await Promise.all([
-  venusApiService.getMarkets(),
-  pancakeApiService.getPools(),
-  beefyApiService.getVaults(),
-]);
+    const [venus, pancake, beefy] = await Promise.allSettled([
+      venusApiService.getMarkets(),
+      pancakeApiService.getPools(),
+      beefyApiService.getVaults(),
+    ]);
 
-    this.venusMarkets = venusMarkets;
-    this.pancakePools = pancakePools;
-    this.beefyVaults = beefyVaults;
+    if (venus.status === "fulfilled") {
+      this.venusMarkets = venus.value;
+    } else {
+      console.error("Venus error:", venus.reason);
+    }
+
+    if (pancake.status === "fulfilled") {
+      this.pancakePools = pancake.value;
+    } else {
+      console.error("Pancake error:", pancake.reason);
+    }
+
+    if (beefy.status === "fulfilled") {
+      this.beefyVaults = beefy.value;
+    } else {
+      console.error("Beefy error:", beefy.reason);
+    }
 
     this.lastUpdate = new Date();
   } finally {
     this.refreshPromise = null;
   }
-})();
+})(); 
 
     return this.refreshPromise;
   }
