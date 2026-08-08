@@ -44,6 +44,10 @@ export default function LiquidityPanel({
 ];
     const [showAllocateModal, setShowAllocateModal] = useState(false);
 const [showTransferModal, setShowTransferModal] = useState(false);
+const [showHarvestModal, setShowHarvestModal] = useState(false);
+const [showBalanceModal, setShowBalanceModal] = useState(false);
+const [balanceProtocol, setBalanceProtocol] = useState("Venus");
+const [realBalance, setRealBalance] = useState("");
 
 const [selectedProtocol, setSelectedProtocol] = useState("Beefy");
 const [fromProtocol, setFromProtocol] = useState("Beefy");
@@ -269,6 +273,43 @@ const returnToPool = async () => {
     toast.error("Return failed");
   }
 };
+const setProtocolBalance = async () => {
+  try {
+    const contract = await getContract();
+
+    const protocolMap: Record<string, number> = {
+      Beefy: 2,
+      Venus: 3,
+      Pancake: 4,
+    };
+
+    const tx = await contract.setProtocolBalance(
+      protocolMap[balanceProtocol],
+      ethers.parseUnits(realBalance || "0", 18)
+    );
+
+    await tx.wait();
+
+    toast.success("Protocol balance updated");
+
+    setRealBalance("");
+    setBalanceProtocol("Venus");
+    setShowBalanceModal(false);
+
+    await loadLiquidity();
+    await loadStatistics();
+
+  } catch (e: any) {
+    console.error(e);
+
+    toast.error(
+      e?.shortMessage ||
+      e?.reason ||
+      e?.message ||
+      "Update failed"
+    );
+  }
+};
 const processReserveFees = async () => {
   try {
     const contract = await getContract();
@@ -292,6 +333,36 @@ const processReserveFees = async () => {
     "Process failed"
   );
 }
+};
+const harvestProfit = async () => {
+  try {
+    const contract = await getContract();
+
+    const tx = await contract.harvestProtocolProfit(
+  ethers.parseUnits(amount || "0", 18)
+);
+
+    await tx.wait();
+
+    toast.success("Profit harvested");
+
+    setAmount("");
+    setFromProtocol("Venus");
+
+    await loadUser();
+    await loadStatistics();
+    await loadLiquidity();
+
+  } catch (e: any) {
+    console.error(e);
+
+    toast.error(
+      e?.shortMessage ||
+      e?.reason ||
+      e?.message ||
+      "Harvest failed"
+    );
+  }
 };
 
   const activeProtocols = protocols.length;
@@ -376,20 +447,28 @@ const processReserveFees = async () => {
   <button
     onClick={() => setShowAllocateModal(true)}
   >
-    Allocate
+     Распределить
   </button>
 
   <button
     onClick={() => setShowTransferModal(true)}
   >
-    Transfer
+    Перевести
   </button>
 
   <button
     onClick={processReserveFees}
   >
-    Process Reserve Fees
+    Перевести комиссии
   </button>
+  <button
+  onClick={() => setShowHarvestModal(true)}
+>
+   Вывести прибыль
+</button>
+<button onClick={() => setShowBalanceModal(true)}>
+  Обновить баланс
+</button>
 </div>
     {showAllocateModal && (
   <div
@@ -585,6 +664,166 @@ const processReserveFees = async () => {
 <button onClick={transferFunds}>
   Transfer
 </button>
+      </div>
+    </div>
+  </div>
+)}
+{showHarvestModal && (
+  <div
+    style={{
+      position: "fixed",
+      inset: 0,
+      background: "rgba(0,0,0,0.5)",
+      display: "flex",
+      justifyContent: "center",
+      alignItems: "center",
+      zIndex: 1000,
+    }}
+  >
+    <div
+      style={{
+        background: "#fff",
+        padding: "24px",
+        borderRadius: "12px",
+        width: "420px",
+      }}
+    >
+      <h2>Harvest Profit</h2>
+
+      <div style={{ marginTop: "20px" }}>
+        <label>
+          <b>Amount (USDT)</b>
+        </label>
+
+        <br />
+
+        <input
+          type="number"
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+          placeholder="0.00"
+          style={{
+            width: "100%",
+            padding: "8px",
+            marginTop: "8px",
+            boxSizing: "border-box",
+          }}
+        />
+      </div>
+
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "flex-end",
+          gap: "10px",
+          marginTop: "24px",
+        }}
+      >
+        <button
+          onClick={() => {
+            setShowHarvestModal(false);
+            setAmount("");
+          }}
+        >
+          Cancel
+        </button>
+
+        <button
+          onClick={async () => {
+            await harvestProfit();
+            setShowHarvestModal(false);
+          }}
+        >
+          Harvest
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+{showBalanceModal && (
+  <div
+    style={{
+      position: "fixed",
+      inset: 0,
+      background: "rgba(0,0,0,0.5)",
+      display: "flex",
+      justifyContent: "center",
+      alignItems: "center",
+      zIndex: 1000,
+    }}
+  >
+    <div
+      style={{
+        background: "#fff",
+        padding: "24px",
+        borderRadius: "12px",
+        width: "420px",
+      }}
+    >
+      <h2>Set Protocol Balance</h2>
+
+      <div style={{ marginTop: "20px" }}>
+        <label>
+          <b>Protocol</b>
+        </label>
+
+        <br />
+
+        <select
+          value={balanceProtocol}
+          onChange={(e) => setBalanceProtocol(e.target.value)}
+          style={{
+            width: "100%",
+            padding: "8px",
+            marginTop: "8px",
+          }}
+        >
+          <option>Beefy</option>
+          <option>Venus</option>
+          <option>Pancake</option>
+        </select>
+      </div>
+
+      <div style={{ marginTop: "20px" }}>
+        <label>
+          <b>Real Balance (USDT)</b>
+        </label>
+
+        <br />
+
+        <input
+          type="number"
+          value={realBalance}
+          onChange={(e) => setRealBalance(e.target.value)}
+          placeholder="0.00"
+          style={{
+            width: "100%",
+            padding: "8px",
+            marginTop: "8px",
+            boxSizing: "border-box",
+          }}
+        />
+      </div>
+
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "flex-end",
+          gap: "10px",
+          marginTop: "24px",
+        }}
+      >
+        <button
+          onClick={() => setShowBalanceModal(false)}
+        >
+          Cancel
+        </button>
+
+        <button
+          onClick={setProtocolBalance}
+        >
+          Update
+        </button>
       </div>
     </div>
   </div>

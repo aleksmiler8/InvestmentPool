@@ -205,6 +205,25 @@ export const InvestmentPoolABI = [
     "anonymous": false,
     "inputs": [
       {
+        "indexed": true,
+        "internalType": "enum InvestmentPoolV2.Protocol",
+        "name": "protocol",
+        "type": "uint8"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "ProfitHarvested",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
         "indexed": false,
         "internalType": "uint256",
         "name": "period",
@@ -517,6 +536,19 @@ export const InvestmentPoolABI = [
     "type": "function"
   },
   {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "harvestProtocolProfit",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
     "inputs": [],
     "name": "minimumInvestment",
     "outputs": [
@@ -723,6 +755,24 @@ export const InvestmentPoolABI = [
   {
     "inputs": [
       {
+        "internalType": "enum InvestmentPoolV2.Protocol",
+        "name": "protocol",
+        "type": "uint8"
+      },
+      {
+        "internalType": "uint256",
+        "name": "balance",
+        "type": "uint256"
+      }
+    ],
+    "name": "setProtocolBalance",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
         "internalType": "address",
         "name": "newWallet",
         "type": "address"
@@ -753,6 +803,19 @@ export const InvestmentPoolABI = [
   },
   {
     "inputs": [],
+    "name": "totalActiveDeposits",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
     "name": "totalDeposits",
     "outputs": [
       {
@@ -767,6 +830,19 @@ export const InvestmentPoolABI = [
   {
     "inputs": [],
     "name": "totalInvestors",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "totalPendingRewards",
     "outputs": [
       {
         "internalType": "uint256",
