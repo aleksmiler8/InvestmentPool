@@ -6,6 +6,7 @@ import { getUSDT } from "../../contracts/USDT";
 import { venusApiService } from "../../services/liquidity/adapters/venus/VenusApiService";
 import { beefyApiService } from "../../services/liquidity/adapters/beefy/BeefyApiService";
 import { pancakeApiService } from "../../services/liquidity/adapters/pancakeswap/PancakeApiService";
+import { aaveApiService } from "../../services/liquidity/adapters/aave/AaveApiService";
 type Props = {
   loadUser: () => Promise<void>;
   loadStatistics: () => Promise<void>;
@@ -41,6 +42,11 @@ export default function LiquidityPanel({
     name: "Pancake",
     status: "connected",
   },
+  {
+  id: "aave",
+  name: "Aave",
+  status: "connected",
+},
 ];
     const [showAllocateModal, setShowAllocateModal] = useState(false);
 const [showTransferModal, setShowTransferModal] = useState(false);
@@ -67,6 +73,7 @@ const [protocolApy, setProtocolApy] = useState({
   Beefy: "-",
   Venus: "-",
   Pancake: "-",
+   Aave: "-",
 });
 
 const [protocolPool, setProtocolPool] = useState({
@@ -75,6 +82,7 @@ const [protocolPool, setProtocolPool] = useState({
   Beefy: "-",
   Venus: "-",
   Pancake: "-",
+   Aave: "-",
 });
 const loadLiquidity = async () => {
   try {
@@ -106,10 +114,11 @@ useEffect(() => {
   loadApy();
 }, []);
    const loadApy = async () => {
-  const [markets, vaults, pools] = await Promise.allSettled([
+  const [markets, vaults, pools, aaveMarkets] = await Promise.allSettled([
     venusApiService.getMarkets(),
     beefyApiService.getVaults(),
     pancakeApiService.getPools(),
+     aaveApiService.getMarkets(),
   ]);
 
   // ---------- Venus ----------
@@ -133,13 +142,46 @@ useEffect(() => {
   } else {
     console.error("Venus error:", markets.reason);
   }
+  // ---------- Aave ----------
+
+if (aaveMarkets.status === "fulfilled") {
+  const bestAave = [...aaveMarkets.value]
+    .filter(
+      (market) =>
+        market.symbol.toUpperCase() === "USDT" &&
+        Number.isFinite(market.supplyApy) &&
+        market.supplyApy >= 0
+    )
+    .sort((a, b) => b.supplyApy - a.supplyApy)[0];
+
+  if (bestAave) {
+    setProtocolApy((prev) => ({
+      ...prev,
+      Aave: `${bestAave.supplyApy.toFixed(2)}%`,
+    }));
+
+    setProtocolPool((prev) => ({
+      ...prev,
+      Aave: "USDT",
+    }));
+  }
+} else {
+  console.error("Aave error:", aaveMarkets.reason);
+}
 
   // ---------- Beefy ----------
 
   if (vaults.status === "fulfilled") {
     const bestBeefy = [...vaults.value]
-      .filter((vault) => vault.apy !== null)
-      .sort((a, b) => (b.apy ?? 0) - (a.apy ?? 0))[0];
+  .filter(
+    (vault) =>
+      vault.apy !== null &&
+      Number.isFinite(vault.apy) &&
+      vault.apy >= 0 &&
+      vault.apy < 1000 &&
+      vault.network === "bsc"
+  )
+  .sort((a, b) => (b.apy ?? 0) - (a.apy ?? 0))[0];
 
     if (bestBeefy) {
       setProtocolApy((prev) => ({

@@ -11,6 +11,7 @@ export class BeefyService {
     const vaults = vaultsResponse.data;
     const apy = apyResponse.data;
     const tvl = tvlResponse.data;
+    console.log("Beefy APY:", apy);
 
     return vaults
       .filter((vault: any) => vault.status === "active")
