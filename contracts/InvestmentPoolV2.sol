@@ -18,6 +18,10 @@ uint256 public totalDeposits;
 uint256 public totalInvestors;
 
 mapping(Protocol => uint256) public protocolBalance;
+// Общая сумма прибыли, уже обещанной активным инвесторам,
+// но ещё не выплаченной.
+uint256 public totalPendingRewards;
+uint256 public totalActiveDeposits;
 
     uint256 public constant DAY = 1 days;
     uint256 public constant WEEK = 7 days;
@@ -100,6 +104,10 @@ event LiquidityReturned(
     Protocol indexed from,
     uint256 amount
 );
+event ProfitHarvested(
+    Protocol indexed protocol,
+    uint256 amount
+);
 
     modifier validPeriod(uint256 period) {
         require(
@@ -171,6 +179,8 @@ for (uint256 i = 0; i < investor.investments.length; i++) {
         }
 
         uint256 reward = (amount * rewardRate[period]) / 10000;
+        // Учитываем прибыль, уже обещанную пользователям
+totalPendingRewards += reward;
 
         investor.investments.push(
             Investment({
@@ -186,6 +196,7 @@ for (uint256 i = 0; i < investor.investments.length; i++) {
 
         investor.totalInvested += amount;
         totalDeposits += amount;
+        totalActiveDeposits += amount;
         protocolBalance[Protocol.Pool] += amount;
 
         emit Deposited(
@@ -274,6 +285,9 @@ protocolBalance[Protocol.Pool] -= payout;
 
 investor.totalWithdrawn += payout;
 investor.totalReward += inv.reward;
+// Прибыль выплачена, обязательство закрыто
+totalPendingRewards -= inv.reward;
+totalActiveDeposits -= inv.amount;
 
 usdt.safeTransfer(msg.sender, payout);
     
@@ -327,6 +341,9 @@ require(
 protocolBalance[Protocol.Pool] -= payout;
 
 investor.totalWithdrawn += payout;
+// Пользователь отказался от прибыли
+totalPendingRewards -= inv.reward;
+totalActiveDeposits -= inv.amount;
 
 usdt.safeTransfer(msg.sender, payout);
     
@@ -559,5 +576,72 @@ function setReserveWallet(address newWallet)
     require(newWallet != address(0), "Invalid wallet");
 
     reserveWallet = newWallet;
+}
+function setProtocolBalance(
+    Protocol protocol,
+    uint256 balance
+)
+    external
+    onlyOwner
+{
+    protocolBalance[protocol] = balance;
+}
+function harvestProtocolProfit(
+    uint256 amount
+)
+    external
+    onlyOwner
+{
+    require(amount > 0, "Invalid amount");
+
+// Считаем общее обеспечение проекта
+uint256 totalBacking =
+    protocolBalance[Protocol.Pool] +
+    protocolBalance[Protocol.Beefy] +
+    protocolBalance[Protocol.Venus] +
+    protocolBalance[Protocol.Pancake];
+uint256 lockedReserveFees = 0;
+
+for (uint256 i = 0; i < pendingReserveFees.length; i++) {
+    if (!pendingReserveFees[i].transferred) {
+        lockedReserveFees += pendingReserveFees[i].amount;
+    }
+}
+require(
+    totalBacking >=
+        totalActiveDeposits +
+        totalPendingRewards +
+        lockedReserveFees,
+    "No free profit"
+);
+uint256 freeProfit =
+    totalBacking -
+    totalActiveDeposits -
+    totalPendingRewards -
+    lockedReserveFees;   
+
+require(
+    amount <= freeProfit,
+    "Amount exceeds free profit"
+);
+require(
+    usdt.balanceOf(address(this)) >= amount,
+    "Insufficient USDT balance"
+);
+
+// Свободная прибыль уже проверена выше
+// поэтому просто переводим её в резерв
+
+if (protocolBalance[Protocol.Pool] < amount) {
+    _returnLiquidityToPool(
+        amount - protocolBalance[Protocol.Pool]
+    );
+}
+
+protocolBalance[Protocol.Pool] -= amount;
+
+usdt.safeTransfer(reserveWallet, amount);
+
+emit ProfitHarvested(Protocol.Pool, amount);
 }
 }
