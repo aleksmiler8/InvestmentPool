@@ -65,6 +65,7 @@ const [protocolBalances, setProtocolBalances] = useState({
   Beefy: "0",
   Venus: "0",
   Pancake: "0",
+  Aave: "0",
 });
 
 const [protocolApy, setProtocolApy] = useState({
@@ -96,6 +97,7 @@ const reserve = await usdt.balanceOf(reserveWallet);
 const beefy = await contract.protocolBalance(2);
 const venus = await contract.protocolBalance(3);
 const pancake = await contract.protocolBalance(4);
+const aave = await contract.protocolBalance(5);
 
     setProtocolBalances({
       Pool: ethers.formatUnits(pool, 18),
@@ -103,6 +105,7 @@ const pancake = await contract.protocolBalance(4);
       Beefy: ethers.formatUnits(beefy, 18),
       Venus: ethers.formatUnits(venus, 18),
       Pancake: ethers.formatUnits(pancake, 18),
+      Aave: ethers.formatUnits(aave, 18),
     });
   } catch (e) {
     console.error("Failed to load liquidity:", e);
@@ -202,7 +205,10 @@ if (aaveMarkets.status === "fulfilled") {
 
   if (pools.status === "fulfilled") {
     const bestPool = [...pools.value]
-      .sort((a, b) => b.tvl - a.tvl)[0];
+  .filter((pool) =>
+    pool.pair.toUpperCase().includes("USDT")
+  )
+  .sort((a, b) => b.tvl - a.tvl)[0];
 
     if (bestPool) {
       setProtocolPool((prev) => ({
@@ -227,6 +233,7 @@ const allocateFunds = async () => {
   Beefy: 2,
   Venus: 3,
   Pancake: 4,
+  Aave: 5,
 };
 
     const tx = await contract.allocateToProtocol(
@@ -258,6 +265,7 @@ const transferFunds = async () => {
   Beefy: 2,
   Venus: 3,
   Pancake: 4,
+    Aave: 5,
 };
 
     const tx = await contract.transferBetweenProtocols(
@@ -291,6 +299,7 @@ const returnToPool = async () => {
       Beefy: 2,
       Venus: 3,
       Pancake: 4,
+        Aave: 5,
     };
 
     const tx = await contract.returnToPool(
@@ -323,6 +332,7 @@ const setProtocolBalance = async () => {
       Beefy: 2,
       Venus: 3,
       Pancake: 4,
+        Aave: 5,
     };
 
     const tx = await contract.setProtocolBalance(
@@ -555,6 +565,7 @@ const harvestProfit = async () => {
           <option>Beefy</option>
           <option>Venus</option>
           <option>Pancake</option>
+          <option>Aave</option>
         </select>
       </div>
 
@@ -645,6 +656,7 @@ const harvestProfit = async () => {
           <option>Beefy</option>
           <option>Venus</option>
           <option>Pancake</option>
+          <option>Aave</option>
         </select>
       </div>
 
@@ -665,6 +677,7 @@ const harvestProfit = async () => {
           <option>Beefy</option>
           <option>Venus</option>
           <option>Pancake</option>
+          <option>Aave</option>
         </select>
       </div>
 
@@ -823,6 +836,7 @@ const harvestProfit = async () => {
           <option>Beefy</option>
           <option>Venus</option>
           <option>Pancake</option>
+          <option>Aave</option>
         </select>
       </div>
 

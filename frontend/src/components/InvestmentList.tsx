@@ -38,6 +38,13 @@ export default function InvestmentList({
         const remainingSeconds = Math.max(0, endTime - now);
         const remainingDays = Math.ceil(remainingSeconds / 86400);
 
+const today = new Date();
+const finishDay = new Date(endTime * 1000);
+
+const isToday =
+  today.getFullYear() === finishDay.getFullYear() &&
+  today.getMonth() === finishDay.getMonth() &&
+  today.getDate() === finishDay.getDate();
         const total = endTime - startTime;
         const passed = Math.min(now - startTime, total);
 
@@ -65,11 +72,15 @@ export default function InvestmentList({
             </p>
 
             <p>
-              <b>{t("remaining")}:</b>{" "}
-              {finished
-  ? `0 ${t("days")}`
-  : `${remainingDays} ${t("days")}`}
-            </p>
+  <b>{t("remaining")}:</b>{" "}
+  {finished
+    ? t("expired")
+    : isToday
+      ? t("today")
+      : remainingDays === 1
+        ? `1 ${t("one_day")}`
+        : `${remainingDays} ${t("days")}`}
+</p>
 
             <div className="progress">
               <div

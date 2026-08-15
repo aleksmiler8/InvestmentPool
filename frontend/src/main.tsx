@@ -7,6 +7,8 @@ import "./index.css";
 import "./i18n";
 
 import { WalletProvider } from "./wallet";
+import { bootstrapLiquidity } from "./bootstrap/liquidity";
+bootstrapLiquidity().catch(console.error);
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

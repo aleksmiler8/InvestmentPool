@@ -33,6 +33,9 @@
 "finish": "Дата завершення",
 "remaining": "Залишилось",
 "days": "днів",
+"today": "Сьогодні",
+"expired": "Термін дії минув",
+"one_day": "день",
 "about_title": "Про Investment Pool",
 "about_subtitle": "Інвестиційна платформа на блокчейні",
 

@@ -33,6 +33,9 @@
 "finish": "Data zakończenia",
 "remaining": "Pozostało",
 "days": "dni",
+"today": "Dzisiaj",
+"expired": "Termin minął",
+"one_day": "dzień",
 "about_title": "O Investment Pool",
 "about_subtitle": "Platforma inwestycyjna oparta na blockchain",
 

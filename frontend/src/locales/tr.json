@@ -33,6 +33,9 @@
 "finish": "Bitiş tarihi",
 "remaining": "Kalan",
 "days": "gün",
+"today": "Bugün",
+"expired": "Süresi doldu",
+"one_day": "gün",
 "about_title": "À propos d'Investment Pool",
 "about_subtitle": "Plateforme d'investissement sur la blockchain",
 

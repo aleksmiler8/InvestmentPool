@@ -27,6 +27,10 @@
   "enterAmountError": "Entrez le montant",
   "finish": "Date de fin",
 "remaining": "Restant",
+"days": "jours",
+"today": "Aujourd’hui",
+"expired": "Expiré",
+"one_day": "jour",
 "rules": {
   "rule1": "Ces règles sont obligatoires pour tous les utilisateurs sans exception.",
   "rule2": "Les investissements sont effectués volontairement et à la seule discrétion de l'utilisateur.",

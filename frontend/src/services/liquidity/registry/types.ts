@@ -8,7 +8,8 @@
 export type ProtocolId =
   | "venus"
   | "pancakeswap"
-  | "beefy";
+  | "beefy"
+  | "aave";
 
 export type Network =
   | "bsc"
