@@ -477,604 +477,466 @@ totalPendingRewards += reward;
             inv.finished
         );
     }
-    function withdraw(uint256 investmentId)
-    external
-    whenNotPaused
-    nonReentrant
-{
-    Investor storage investor =
-        investors[msg.sender];
-
-    require(
-        investmentId < investor.investments.length,
-        "Invalid investment"
-    );
-
-    Investment storage inv =
-        investor.investments[investmentId];
-
-    require(
-        inv.active,
-        "Investment inactive"
-    );
-
-    require(
-        !inv.finished,
-        "Already withdrawn"
-    );
-
-    require(
-        block.timestamp >= inv.endTime,
-        "Investment not finished"
-    );
 
     /*
      * ============================================================
-     * 1. REAL VENUS STATE
+     * REAL LIQUIDITY RECOVERY
      * ============================================================
+     *
+     * Withdrawal uses real protocol assets as the source of truth.
+     * protocolBalance is used only for accounting after real USDT
+     * has actually returned to this Pool.
+     *
+     * Recovery order:
+     *   Venus -> Beefy -> Pancake -> Aave
      */
 
-    uint256 venusUnderlying =
-        vUSDT.balanceOfUnderlying(
-            address(this)
-        );
+    function _protocolAvailableAssets(
+        Protocol protocol
+    )
+        internal
+        returns (uint256)
+    {
+        if (protocol == Protocol.Venus) {
+            try vUSDT.balanceOfUnderlying(address(this))
+                returns (uint256 assets)
+            {
+                return assets;
+            } catch {
+                return 0;
+            }
+        }
 
-    uint256 venusPrincipal =
-        protocolBalance[Protocol.Venus];
+        IProtocolAdapter adapter;
 
-    uint256 venusProfit = 0;
-
-    if (
-        venusUnderlying >
-        venusPrincipal
-    ) {
-        venusProfit =
-            venusUnderlying -
-            venusPrincipal;
-    }
-
-    /*
-     * ============================================================
-     * 2. REAL USER PROFIT
-     * ============================================================
-     *
-     * User receives:
-     *
-     * min(real protocol profit, promised reward)
-     *
-     * Reserve receives excess real profit.
-     */
-
-    uint256 investorProfit;
-
-    if (
-        venusProfit <
-        inv.reward
-    ) {
-        investorProfit =
-            venusProfit;
-    } else {
-        investorProfit =
-            inv.reward;
-    }
-
-    uint256 payout =
-        inv.amount +
-        investorProfit;
-
-    /*
-     * ============================================================
-     * 3. REAL EXCESS PROFIT
-     * ============================================================
-     */
-
-    uint256 reserveProfit = 0;
-
-    if (
-        venusProfit >
-        inv.reward
-    ) {
-        reserveProfit =
-            venusProfit -
-            inv.reward;
-    }
-
-    /*
-     * ============================================================
-     * 4. HOW MUCH MUST COME FROM VENUS?
-     * ============================================================
-     */
-
-    uint256 poolBalance =
-        protocolBalance[Protocol.Pool];
-
-    uint256 neededFromVenus = 0;
-
-    if (
-        poolBalance <
-        payout
-    ) {
-        neededFromVenus =
-            payout -
-            poolBalance;
-    }
-
-    /*
-     * Reserve profit must also become REAL USDT.
-     *
-     * Therefore it is included in the real Venus withdrawal.
-     */
-
-    uint256 totalVenusRedeem =
-        neededFromVenus +
-        reserveProfit;
-
-    /*
-     * ============================================================
-     * 5. REAL VENUS WITHDRAW
-     * ============================================================
-     *
-     * IMPORTANT:
-     *
-     * We NEVER call redeemUnderlying() for an amount whose
-     * corresponding vToken amount rounds to zero.
-     *
-     * This prevents:
-     *
-     *     redeemTokens zero
-     */
-
-    uint256 actualVenusReturned = 0;
-
-    if (
-        totalVenusRedeem >
-        0
-    ) {
-
-        require(
-            venusUnderlying >=
-                totalVenusRedeem,
-            "Insufficient Venus liquidity"
-        );
-
-        uint256 exchangeRate =
-            vUSDT.exchangeRateStored();
-
-        require(
-            exchangeRate > 0,
-            "Invalid Venus exchange rate"
-        );
-
-        uint256 redeemTokens =
-            (
-                totalVenusRedeem *
-                1e18
-            ) /
-            exchangeRate;
-
-        /*
-         * Microscopic amount.
-         *
-         * Do NOT call Venus.
-         */
-        require(
-            redeemTokens > 0,
-            "Venus amount too small"
-        );
-
-        uint256 usdtBefore =
-            usdt.balanceOf(
-                address(this)
-            );
-
-        uint256 result =
-            vUSDT.redeemUnderlying(
-                totalVenusRedeem
-            );
-
-        require(
-            result == 0,
-            "Venus redeem failed"
-        );
-
-        uint256 usdtAfter =
-            usdt.balanceOf(
-                address(this)
-            );
-
-        actualVenusReturned =
-            usdtAfter -
-            usdtBefore;
-
-        require(
-            actualVenusReturned > 0,
-            "Venus returned zero"
-        );
-
-        /*
-         * ========================================================
-         * 6. UPDATE VENUS ACCOUNTING
-         * ========================================================
-         *
-         * Only principal leaves Venus accounting.
-         *
-         * Profit is NOT principal.
-         */
-
-        uint256 principalReturned;
-
-        if (
-            totalVenusRedeem <=
-            venusPrincipal
-        ) {
-            principalReturned =
-                totalVenusRedeem;
+        if (protocol == Protocol.Beefy) {
+            adapter = beefyAdapter;
+        } else if (protocol == Protocol.Pancake) {
+            adapter = pancakeAdapter;
+        } else if (protocol == Protocol.Aave) {
+            adapter = aaveAdapter;
         } else {
-            principalReturned =
-                venusPrincipal;
+            return 0;
         }
 
-        if (
-            principalReturned > 0
-        ) {
-            protocolBalance[
-                Protocol.Venus
-            ] -= principalReturned;
+        if (address(adapter) == address(0)) {
+            return 0;
         }
 
-        /*
-         * Only the amount required for the user's payout
-         * becomes Pool liquidity.
-         *
-         * Reserve profit is handled separately below.
-         */
+        try adapter.totalAssets()
+            returns (uint256 assets)
+        {
+            return assets;
+        } catch {
+            return 0;
+        }
+    }
 
-        if (
-            neededFromVenus > 0
-        ) {
-            protocolBalance[
-                Protocol.Pool
-            ] += neededFromVenus;
+    function _withdrawFromProtocol(
+        Protocol protocol,
+        uint256 amount
+    )
+        internal
+        returns (uint256 actual)
+    {
+        if (amount == 0) {
+            return 0;
         }
 
-        poolBalance =
-            protocolBalance[
-                Protocol.Pool
-            ];
-    }
+        uint256 beforeBalance =
+            usdt.balanceOf(address(this));
 
-    /*
-     * ============================================================
-     * 7. REAL POOL LIQUIDITY CHECK
-     * ============================================================
-     */
+        if (protocol == Protocol.Venus) {
 
-    require(
-        poolBalance >=
-            payout,
-        "Insufficient Pool balance"
-    );
+            uint256 available =
+                _protocolAvailableAssets(Protocol.Venus);
 
-    require(
-        usdt.balanceOf(
-            address(this)
-        ) >= payout,
-        "Insufficient real liquidity"
-    );
+            uint256 request =
+                available < amount
+                ? available
+                : amount;
 
-    /*
-     * ============================================================
-     * 8. ACCOUNTING
-     * ============================================================
-     */
+            if (request == 0) {
+                return 0;
+            }
 
-    protocolBalance[
-        Protocol.Pool
-    ] -= payout;
+            try vUSDT.redeemUnderlying(
+                request
+            ) returns (uint256 result) {
 
-    investor.totalWithdrawn +=
-        payout;
+                if (result != 0) {
+                    return 0;
+                }
 
-    investor.totalReward +=
-        investorProfit;
+            } catch {
+                return 0;
+            }
 
-    totalActiveDeposits -=
-        inv.amount;
+        } else {
 
-    if (
-        totalPendingRewards >=
-        inv.reward
-    ) {
-        totalPendingRewards -=
-            inv.reward;
-    } else {
-        totalPendingRewards = 0;
-    }
+            IProtocolAdapter adapter;
 
-    inv.active = false;
-    inv.finished = true;
-
-    /*
-     * ============================================================
-     * 9. USER GETS REAL USDT
-     * ============================================================
-     */
-
-    usdt.safeTransfer(
-        msg.sender,
-        payout
-    );
-
-    /*
-     * ============================================================
-     * 10. REAL EXCESS PROFIT -> REAL RESERVE
-     * ============================================================
-     *
-     * IMPORTANT:
-     *
-     * We do NOT do:
-     *
-     * protocolBalance[Protocol.Reserve] += reserveProfit;
-     *
-     * Instead the actual USDT is transferred.
-     */
-
-    if (
-        reserveProfit > 0
-    ) {
-
-        require(
-            actualVenusReturned >=
-                neededFromVenus +
-                reserveProfit,
-            "Insufficient harvested profit"
-        );
-
-        /*
-         * The payout was already sent to the user.
-         *
-         * The remaining real profit belongs to Reserve.
-         */
-
-        uint256 reserveAvailable =
-            usdt.balanceOf(
-                address(this)
-            );
-
-        require(
-            reserveAvailable >=
-                reserveProfit,
-            "Insufficient Reserve liquidity"
-        );
-
-        usdt.safeTransfer(
-            reserveWallet,
-            reserveProfit
-        );
-
-        emit ProfitHarvested(
-            Protocol.Venus,
-            reserveProfit
-        );
-    }
-
-    emit Withdrawn(
-        msg.sender,
-        investmentId,
-        inv.amount,
-        investorProfit
-    );
-}
-
-function earlyWithdraw(uint256 investmentId)
-    external
-    whenNotPaused
-    nonReentrant
-{
-    Investor storage investor = investors[msg.sender];
-
-    require(
-        investmentId < investor.investments.length,
-        "Invalid investment"
-    );
-
-    Investment storage inv =
-        investor.investments[investmentId];
-
-    require(
-        inv.active,
-        "Investment inactive"
-    );
-
-    require(
-        !inv.finished,
-        "Already withdrawn"
-    );
-
-    require(
-        block.timestamp < inv.endTime,
-        "Use normal withdraw"
-    );
-
-    uint256 fee =
-        (inv.amount * earlyWithdrawFee) / 10000;
-
-    uint256 payout =
-        inv.amount - fee;
-
-    /*
-     * ============================================================
-     * 1. CLOSE INVESTMENT
-     * ============================================================
-     */
-
-    inv.active = false;
-    inv.finished = true;
-
-    /*
-     * ============================================================
-     * 2. RESERVE FEE
-     * ============================================================
-     *
-     * The 15% fee becomes available to Reserve only after
-     * the original investment end time.
-     */
-
-    pendingReserveFees.push(
-        PendingReserveFee({
-            amount: fee,
-            unlockTime: inv.endTime,
-            transferred: false
-        })
-    );
-
-    /*
-     * ============================================================
-     * 3. FIND REAL LIQUIDITY
-     * ============================================================
-     *
-     * First use Pool liquidity.
-     *
-     * If Pool does not have enough USDT, try to recover
-     * the required principal from Venus.
-     *
-     * Beefy / Pancake / Aave will be handled by the real
-     * adapters added later. We DO NOT fake their balances here.
-     */
-
-    uint256 poolBalance =
-        protocolBalance[Protocol.Pool];
-
-    if (poolBalance < payout) {
-
-        uint256 needed =
-            payout - poolBalance;
-
-        uint256 venusUnderlying =
-            vUSDT.balanceOfUnderlying(
-                address(this)
-            );
-
-        if (venusUnderlying > 0) {
-
-            uint256 redeemAmount;
-
-            if (venusUnderlying >= needed) {
-                redeemAmount = needed;
+            if (protocol == Protocol.Beefy) {
+                adapter = beefyAdapter;
+            } else if (protocol == Protocol.Pancake) {
+                adapter = pancakeAdapter;
+            } else if (protocol == Protocol.Aave) {
+                adapter = aaveAdapter;
             } else {
-                redeemAmount = venusUnderlying;
+                return 0;
+            }
+
+            if (address(adapter) == address(0)) {
+                return 0;
+            }
+
+            uint256 available;
+
+            try adapter.totalAssets()
+                returns (uint256 assets)
+            {
+                available = assets;
+            } catch {
+                return 0;
+            }
+
+            uint256 request =
+                available < amount
+                ? available
+                : amount;
+
+            if (request == 0) {
+                return 0;
             }
 
             /*
-             * Avoid Venus "redeemTokens zero".
+             * The adapter is called by InvestmentPool itself.
+             * We measure the real USDT balance change instead of
+             * trusting the adapter's return value.
              */
-
-            uint256 exchangeRate =
-                vUSDT.exchangeRateStored();
-
-            require(
-                exchangeRate > 0,
-                "Invalid Venus exchange rate"
-            );
-
-            uint256 redeemTokens =
-                (redeemAmount * 1e18) /
-                exchangeRate;
-
-            if (redeemTokens > 0) {
-
-                uint256 result =
-                    vUSDT.redeemUnderlying(
-                        redeemAmount
-                    );
-
-                require(
-                    result == 0,
-                    "Venus redeem failed"
-                );
-
-                uint256 venusPrincipal =
-                    protocolBalance[Protocol.Venus];
-
-                uint256 principalReturned;
-
-                if (
-                    redeemAmount <=
-                    venusPrincipal
-                ) {
-                    principalReturned =
-                        redeemAmount;
-                } else {
-                    principalReturned =
-                        venusPrincipal;
-                }
-
-                if (principalReturned > 0) {
-                    protocolBalance[Protocol.Venus] -=
-                        principalReturned;
-                }
-
-                protocolBalance[Protocol.Pool] +=
-                    redeemAmount;
+            try adapter.withdraw(request)
+                returns (uint256)
+            {
+            } catch {
+                return 0;
             }
         }
+
+        uint256 afterBalance =
+            usdt.balanceOf(address(this));
+
+        if (afterBalance <= beforeBalance) {
+            return 0;
+        }
+
+        actual =
+            afterBalance - beforeBalance;
+
+        return actual;
     }
 
-    /*
-     * ============================================================
-     * 4. FINAL LIQUIDITY CHECK
-     * ============================================================
-     */
+    function _accountRecoveredLiquidity(
+        Protocol protocol,
+        uint256 amount
+    )
+        internal
+    {
+        if (amount == 0) {
+            return;
+        }
 
-    require(
-        protocolBalance[Protocol.Pool] >= payout,
-        "Insufficient Pool liquidity"
-    );
+        uint256 recordedPrincipal =
+            protocolBalance[protocol];
 
-    require(
-        usdt.balanceOf(address(this)) >= payout,
-        "Insufficient real liquidity"
-    );
+        uint256 principalReturned =
+            amount < recordedPrincipal
+            ? amount
+            : recordedPrincipal;
 
-    /*
-     * ============================================================
-     * 5. ACCOUNTING
-     * ============================================================
-     */
+        if (principalReturned > 0) {
+            protocolBalance[protocol] -=
+                principalReturned;
+        }
 
-    protocolBalance[Protocol.Pool] -=
-        payout;
+        /*
+         * Every USDT that actually arrived at the Pool becomes
+         * real Pool liquidity. This also works if the protocol
+         * accounting was stale or zero.
+         */
+        protocolBalance[Protocol.Pool] +=
+            amount;
+    }
 
-    totalActiveDeposits -=
-        inv.amount;
+    function _recoverLiquidity(
+        uint256 required
+    )
+        internal
+        returns (uint256 recovered)
+    {
+        if (required == 0) {
+            return 0;
+        }
 
-    if (totalPendingRewards >= inv.reward) {
-        totalPendingRewards -=
+        Protocol[4] memory protocols = [
+            Protocol.Venus,
+            Protocol.Beefy,
+            Protocol.Pancake,
+            Protocol.Aave
+        ];
+
+        for (
+            uint256 i = 0;
+            i < protocols.length;
+            i++
+        ) {
+            if (recovered >= required) {
+                break;
+            }
+
+            Protocol protocol =
+                protocols[i];
+
+            uint256 available =
+                _protocolAvailableAssets(protocol);
+
+            if (available == 0) {
+                continue;
+            }
+
+            uint256 remaining =
+                required - recovered;
+
+            uint256 request =
+                available < remaining
+                ? available
+                : remaining;
+
+            uint256 actual =
+                _withdrawFromProtocol(
+                    protocol,
+                    request
+                );
+
+            if (actual == 0) {
+                continue;
+            }
+
+            _accountRecoveredLiquidity(
+                protocol,
+                actual
+            );
+
+            recovered += actual;
+        }
+
+        return recovered;
+    }
+
+
+    
+    function withdraw(uint256 investmentId)
+        external
+        whenNotPaused
+        nonReentrant
+    {
+        Investor storage investor =
+            investors[msg.sender];
+
+        require(
+            investmentId < investor.investments.length,
+            "Invalid investment"
+        );
+
+        Investment storage inv =
+            investor.investments[investmentId];
+
+        require(
+            inv.active,
+            "Investment inactive"
+        );
+
+        require(
+            !inv.finished,
+            "Already withdrawn"
+        );
+
+        require(
+            block.timestamp >= inv.endTime,
+            "Investment not finished"
+        );
+
+        uint256 payout =
+            inv.amount + inv.reward;
+
+        /*
+         * Use real USDT already held by the Pool first.
+         * If it is insufficient, recover the missing amount from
+         * every real protocol position, regardless of
+         * protocolBalance accounting.
+         */
+        uint256 realBalance =
+            usdt.balanceOf(address(this));
+
+        if (realBalance < payout) {
+            _recoverLiquidity(
+                payout - realBalance
+            );
+        }
+
+        require(
+            usdt.balanceOf(address(this)) >= payout,
+            "Insufficient real liquidity"
+        );
+
+        uint256 poolRecorded =
+            protocolBalance[Protocol.Pool];
+
+        if (poolRecorded >= payout) {
+            protocolBalance[Protocol.Pool] -=
+                payout;
+        } else {
+            protocolBalance[Protocol.Pool] = 0;
+        }
+
+        investor.totalWithdrawn +=
+            payout;
+
+        investor.totalReward +=
             inv.reward;
-    } else {
-        totalPendingRewards = 0;
+
+        totalActiveDeposits -=
+            inv.amount;
+
+        if (totalPendingRewards >= inv.reward) {
+            totalPendingRewards -=
+                inv.reward;
+        } else {
+            totalPendingRewards = 0;
+        }
+
+        inv.active = false;
+        inv.finished = true;
+
+        /*
+         * User is paid first.
+         */
+        usdt.safeTransfer(
+            msg.sender,
+            payout
+        );
+
+        emit Withdrawn(
+            msg.sender,
+            investmentId,
+            inv.amount,
+            inv.reward
+        );
     }
 
-    investor.totalWithdrawn +=
-        payout;
 
-    /*
-     * ============================================================
-     * 6. REAL USDT -> USER
-     * ============================================================
-     */
+    function earlyWithdraw(uint256 investmentId)
+        external
+        whenNotPaused
+        nonReentrant
+    {
+        Investor storage investor =
+            investors[msg.sender];
 
-    usdt.safeTransfer(
-        msg.sender,
-        payout
-    );
+        require(
+            investmentId < investor.investments.length,
+            "Invalid investment"
+        );
 
-    emit EarlyWithdraw(
-        msg.sender,
-        investmentId,
-        payout
-    );
-}
+        Investment storage inv =
+            investor.investments[investmentId];
+
+        require(
+            inv.active,
+            "Investment inactive"
+        );
+
+        require(
+            !inv.finished,
+            "Already withdrawn"
+        );
+
+        require(
+            block.timestamp < inv.endTime,
+            "Use normal withdraw"
+        );
+
+        uint256 fee =
+            (inv.amount * earlyWithdrawFee) /
+            10000;
+
+        uint256 payout =
+            inv.amount - fee;
+
+        /*
+         * Early withdrawal uses the same real-liquidity recovery.
+         * The fee stays locked until the original end time.
+         */
+        uint256 realBalance =
+            usdt.balanceOf(address(this));
+
+        if (realBalance < payout) {
+            _recoverLiquidity(
+                payout - realBalance
+            );
+        }
+
+        require(
+            usdt.balanceOf(address(this)) >= payout,
+            "Insufficient real liquidity"
+        );
+
+        inv.active = false;
+        inv.finished = true;
+
+        pendingReserveFees.push(
+            PendingReserveFee({
+                amount: fee,
+                unlockTime: inv.endTime,
+                transferred: false
+            })
+        );
+
+        uint256 poolRecorded =
+            protocolBalance[Protocol.Pool];
+
+        if (poolRecorded >= payout) {
+            protocolBalance[Protocol.Pool] -=
+                payout;
+        } else {
+            protocolBalance[Protocol.Pool] = 0;
+        }
+
+        totalActiveDeposits -=
+            inv.amount;
+
+        if (totalPendingRewards >= inv.reward) {
+            totalPendingRewards -=
+                inv.reward;
+        } else {
+            totalPendingRewards = 0;
+        }
+
+        investor.totalWithdrawn +=
+            payout;
+
+        usdt.safeTransfer(
+            msg.sender,
+            payout
+        );
+
+        emit EarlyWithdraw(
+            msg.sender,
+            investmentId,
+            payout
+        );
+    }
+
+
 function setEarlyWithdrawFee(uint256 fee)
     external
     onlyOwner

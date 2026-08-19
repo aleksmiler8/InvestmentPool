@@ -236,7 +236,7 @@ const allocateFunds = async () => {
   Aave: 5,
 };
 
-    const tx = await contract.allocateToProtocol(
+    const tx = await contract.investIntoProtocol(
       protocolMap[selectedProtocol],
       ethers.parseUnits(amount || "0", 18)
     );

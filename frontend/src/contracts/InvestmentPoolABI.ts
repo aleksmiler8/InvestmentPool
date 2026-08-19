@@ -374,7 +374,7 @@ export const InvestmentPoolABI = [
         "type": "uint256"
       }
     ],
-    "name": "allocateToProtocol",
+    "name": "investIntoProtocol",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
