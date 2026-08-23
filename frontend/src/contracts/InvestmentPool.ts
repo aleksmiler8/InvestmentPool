@@ -3,7 +3,7 @@ import { getSigner } from "../provider";
 import { InvestmentPoolABI } from "./InvestmentPoolABI";
 
 const CONTRACT_ADDRESS =
-  "0xa888b33f2ed28a55511AaA74E6CB66B2E4A49a67";
+  "0xF7aDeCC6DCE086620CEBFe352070e67606a5b1EB";
 
 export async function getContract() {
   const signer = await getSigner();

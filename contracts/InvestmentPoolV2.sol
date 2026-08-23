@@ -189,7 +189,7 @@ reserveWallet = reserveAddress;
         rewardRate[MONTH] = 350;
         rewardRate[THREE_MONTHS] = 1200;
         rewardRate[SIX_MONTHS] = 2800;
-        rewardRate[YEAR] = 7000;
+        rewardRate[YEAR] = 3500;
     }    function deposit(
         uint256 amount,
         uint256 period
