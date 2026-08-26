@@ -4,4 +4,5 @@ export interface PancakePool {
   tvl: number;
   volume: number;
   price: number;
+  apy: number;
 }
