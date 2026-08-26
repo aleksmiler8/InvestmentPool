@@ -47,6 +47,11 @@ export default function LiquidityPanel({
   name: "Aave",
   status: "connected",
 },
+  {
+    id: "dforce",
+    name: "DForce",
+    status: "connected",
+  },
 ];
     const [showAllocateModal, setShowAllocateModal] = useState(false);
 const [showTransferModal, setShowTransferModal] = useState(false);
@@ -66,6 +71,7 @@ const [protocolBalances, setProtocolBalances] = useState({
   Venus: "0",
   Pancake: "0",
   Aave: "0",
+    DForce: "0",
 });
 
 const [protocolApy, setProtocolApy] = useState({
@@ -75,6 +81,7 @@ const [protocolApy, setProtocolApy] = useState({
   Venus: "-",
   Pancake: "-",
    Aave: "-",
+    DForce: "-",
 });
 
 const [protocolPool, setProtocolPool] = useState({
@@ -84,6 +91,7 @@ const [protocolPool, setProtocolPool] = useState({
   Venus: "-",
   Pancake: "-",
    Aave: "-",
+    DForce: "-",
 });
 const loadLiquidity = async () => {
   try {
@@ -98,6 +106,7 @@ const beefy = await contract.protocolBalance(2);
 const venus = await contract.protocolBalance(3);
 const pancake = await contract.protocolBalance(4);
 const aave = await contract.protocolBalance(5);
+const dforce = await contract.protocolBalance(6);
 
     setProtocolBalances({
       Pool: ethers.formatUnits(pool, 18),
@@ -106,6 +115,7 @@ const aave = await contract.protocolBalance(5);
       Venus: ethers.formatUnits(venus, 18),
       Pancake: ethers.formatUnits(pancake, 18),
       Aave: ethers.formatUnits(aave, 18),
+        DForce: ethers.formatUnits(dforce, 18),
     });
   } catch (e) {
     console.error("Failed to load liquidity:", e);
@@ -217,9 +227,9 @@ if (aaveMarkets.status === "fulfilled") {
       }));
 
       setProtocolApy((prev) => ({
-        ...prev,
-        Pancake: `TVL $${bestPool.tvl.toLocaleString()}`,
-      }));
+  ...prev,
+  Pancake: `${bestPool.apy.toFixed(2)}%`,
+}));
     }
   } else {
     console.error("Pancake error:", pools.reason);
@@ -234,6 +244,7 @@ const allocateFunds = async () => {
   Venus: 3,
   Pancake: 4,
   Aave: 5,
+  DForce: 6,
 };
 
     const tx = await contract.investIntoProtocol(
@@ -266,6 +277,7 @@ const transferFunds = async () => {
   Venus: 3,
   Pancake: 4,
     Aave: 5,
+  DForce: 6,
 };
 
     const tx = await contract.transferBetweenProtocols(
@@ -300,6 +312,7 @@ const returnToPool = async () => {
       Venus: 3,
       Pancake: 4,
         Aave: 5,
+  DForce: 6,
     };
 
     const tx = await contract.returnToPool(
@@ -333,6 +346,7 @@ const setProtocolBalance = async () => {
       Venus: 3,
       Pancake: 4,
         Aave: 5,
+  DForce: 6,
     };
 
     const tx = await contract.setProtocolBalance(
@@ -566,6 +580,7 @@ const harvestProfit = async () => {
           <option>Venus</option>
           <option>Pancake</option>
           <option>Aave</option>
+          <option>DForce</option>
         </select>
       </div>
 
@@ -657,6 +672,7 @@ const harvestProfit = async () => {
           <option>Venus</option>
           <option>Pancake</option>
           <option>Aave</option>
+          <option>DForce</option>
         </select>
       </div>
 
@@ -678,6 +694,7 @@ const harvestProfit = async () => {
           <option>Venus</option>
           <option>Pancake</option>
           <option>Aave</option>
+          <option>DForce</option>
         </select>
       </div>
 
@@ -837,6 +854,7 @@ const harvestProfit = async () => {
           <option>Venus</option>
           <option>Pancake</option>
           <option>Aave</option>
+          <option>DForce</option>
         </select>
       </div>
 

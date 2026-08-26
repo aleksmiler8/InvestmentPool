@@ -11,7 +11,6 @@ import RewardRatesPanel from "./RewardRatesPanel";
 import EarlyWithdrawPanel from "./EarlyWithdrawPanel";
 import LiquidityPanel from "./LiquidityPanel";
 import SwapAdminPanel from "./SwapAdminPanel";
-import InvestmentRecommendationsPanel from "./InvestmentRecommendationsPanel";
 
 const toBasisPoints = (value: string) =>
   Math.round(parseFloat(value || "0") * 100);
@@ -188,8 +187,6 @@ await loadStatistics();
 />
 
         <SwapAdminPanel />
-
-        <InvestmentRecommendationsPanel />
 
       </div>
     </div>

@@ -62,6 +62,7 @@ IProtocolAdapter public beefyAdapter;
 IProtocolAdapter public venusAdapter;
 IProtocolAdapter public pancakeAdapter;
 IProtocolAdapter public aaveAdapter;
+    IProtocolAdapter public dforceAdapter;
 
 uint256 public totalDeposits;
 uint256 public totalInvestors;
@@ -85,7 +86,8 @@ uint256 public totalActiveDeposits;
     Beefy,
     Venus,
     Pancake,
-     Aave
+    Aave,
+    DForce
 }
 
     struct Investment {
@@ -300,6 +302,10 @@ totalPendingRewards += reward;
             aaveAdapter =
                 IProtocolAdapter(adapter);
 
+        } else if (protocol == Protocol.DForce) {
+            dforceAdapter =
+                IProtocolAdapter(adapter);
+
         } else {
             revert(
                 "Invalid adapter protocol"
@@ -335,6 +341,10 @@ totalPendingRewards += reward;
     if (protocol == Protocol.Aave) {
 
         adapter = aaveAdapter;
+
+    } else if (protocol == Protocol.DForce) {
+
+        adapter = dforceAdapter;
 
     } else if (protocol == Protocol.Beefy) {
 
@@ -532,6 +542,20 @@ totalPendingRewards += reward;
             }
         }
 
+        if (protocol == Protocol.DForce) {
+            if (address(dforceAdapter) == address(0)) {
+                return 0;
+            }
+
+            try dforceAdapter.totalAssets()
+                returns (uint256 assets)
+            {
+                return assets;
+            } catch {
+                return 0;
+            }
+        }
+
         return 0;
     }
 
@@ -618,6 +642,31 @@ totalPendingRewards += reward;
                 return 0;
             }
 
+        } else if (protocol == Protocol.DForce) {
+
+            if (address(dforceAdapter) == address(0)) {
+                return 0;
+            }
+
+            uint256 available =
+                _protocolAvailableAssets(Protocol.DForce);
+
+            uint256 request =
+                available < amount
+                ? available
+                : amount;
+
+            if (request == 0) {
+                return 0;
+            }
+
+            try dforceAdapter.withdraw(request)
+                returns (uint256)
+            {
+            } catch {
+                return 0;
+            }
+
         } else {
             return 0;
         }
@@ -678,10 +727,11 @@ totalPendingRewards += reward;
          * This is not a business priority order; it is simply the
          * current list of implemented recovery sources.
          */
-        Protocol[2] memory protocols = [
-            Protocol.Venus,
-            Protocol.Aave
-        ];
+        Protocol[3] memory protocols = [
+    Protocol.Venus,
+    Protocol.Aave,
+    Protocol.DForce
+];
 
         for (uint256 i = 0; i < protocols.length; i++) {
             if (recovered >= required) {
@@ -814,6 +864,38 @@ totalPendingRewards += reward;
 
         return profit;
     }
+    function _dforceRealProfit()
+        internal
+        view
+        returns (uint256 profit)
+    {
+        IProtocolAdapter adapter =
+            dforceAdapter;
+
+        if (address(adapter) == address(0)) {
+            return 0;
+        }
+
+        uint256 assets;
+
+        try adapter.totalAssets()
+            returns (uint256 value)
+        {
+            assets = value;
+        } catch {
+            return 0;
+        }
+
+        uint256 principal =
+            protocolBalance[Protocol.DForce];
+
+        if (assets > principal) {
+            profit =
+                assets - principal;
+        }
+
+        return profit;
+    }
 
     function _poolRealProfit()
         internal
@@ -843,6 +925,10 @@ totalPendingRewards += reward;
 
         profit +=
             _aaveRealProfit();
+
+        
+        profit +=
+            _dforceRealProfit();
 
         profit +=
             _poolRealProfit();
