@@ -228,7 +228,7 @@ if (aaveMarkets.status === "fulfilled") {
 
       setProtocolApy((prev) => ({
   ...prev,
-  Pancake: `${bestPool.apy.toFixed(2)}%`,
+  Pancake: `${(bestPool.apy ?? 0).toFixed(2)}%`,
 }));
     }
   } else {
