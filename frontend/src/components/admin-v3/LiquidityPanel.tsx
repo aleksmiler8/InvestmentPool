@@ -7,6 +7,8 @@ import { venusApiService } from "../../services/liquidity/adapters/venus/VenusAp
 import { beefyApiService } from "../../services/liquidity/adapters/beefy/BeefyApiService";
 import { pancakeApiService } from "../../services/liquidity/adapters/pancakeswap/PancakeApiService";
 import { aaveApiService } from "../../services/liquidity/adapters/aave/AaveApiService";
+import { getSigner } from "../../provider";
+import { dforceApiService } from "../../services/liquidity/adapters/dforce/DForceApiService";
 type Props = {
   loadUser: () => Promise<void>;
   loadStatistics: () => Promise<void>;
@@ -64,6 +66,7 @@ const [selectedProtocol, setSelectedProtocol] = useState("Beefy");
 const [fromProtocol, setFromProtocol] = useState("Beefy");
 const [toProtocol, setToProtocol] = useState("Venus");
 const [amount, setAmount] = useState("");
+const [allocationInvestmentId, setAllocationInvestmentId] = useState("0");
 const [protocolBalances, setProtocolBalances] = useState({
   Pool: "0",
   Reserve: "0",
@@ -100,7 +103,7 @@ const usdt = await getUSDT();
 
 const reserveWallet = await contract.reserveWallet();
 
-const pool = await contract.protocolBalance(0);
+const pool = await usdt.balanceOf(await contract.getAddress())
 const reserve = await usdt.balanceOf(reserveWallet);
 const beefy = await contract.protocolBalance(2);
 const venus = await contract.protocolBalance(3);
@@ -127,11 +130,12 @@ useEffect(() => {
   loadApy();
 }, []);
    const loadApy = async () => {
-  const [markets, vaults, pools, aaveMarkets] = await Promise.allSettled([
+  const [markets, vaults, pools, aaveMarkets, dforceMarkets] = await Promise.allSettled([
     venusApiService.getMarkets(),
     beefyApiService.getVaults(),
     pancakeApiService.getPools(),
      aaveApiService.getMarkets(),
+    dforceApiService.getMarkets(),
   ]);
 
   // ---------- Venus ----------
@@ -234,20 +238,48 @@ if (aaveMarkets.status === "fulfilled") {
   } else {
     console.error("Pancake error:", pools.reason);
   }
+
+  // ---------- DForce ----------
+
+  if (dforceMarkets.status === "fulfilled") {
+    const dforceUsdt = dforceMarkets.value.find(
+      (market) =>
+        market.underlying_symbol?.toUpperCase() === "USDT" ||
+        market.symbol?.toUpperCase() === "IUSDT"
+    );
+
+    if (dforceUsdt) {
+      setProtocolApy((prev) => ({
+        ...prev,
+        DForce: `${dforceUsdt.supplyAPY.toFixed(2)}%`,
+      }));
+
+      setProtocolPool((prev) => ({
+        ...prev,
+        DForce: "USDT",
+      }));
+    }
+  } else {
+    console.error("DForce error:", dforceMarkets.reason);
+  }
 };
 const allocateFunds = async () => {
   try {
     const contract = await getContract();
+    const signer = await getSigner();
+    const allocationUser = await signer.getAddress();
 
     const protocolMap: Record<string, number> = {
-  Beefy: 2,
-  Venus: 3,
-  Pancake: 4,
-  Aave: 5,
-  DForce: 6,
-};
+      Beefy: 2,
+      Venus: 3,
+      Pancake: 4,
+      Aave: 5,
+      DForce: 6,
+    };
 
     const tx = await contract.investIntoProtocol(
+      allocationUser,
+      Number(allocationInvestmentId || "0"),
       protocolMap[selectedProtocol],
       ethers.parseUnits(amount || "0", 18)
     );
@@ -257,6 +289,7 @@ const allocateFunds = async () => {
     toast.success("Funds allocated");
 
     setAmount("");
+    setAllocationInvestmentId("0");
     setSelectedProtocol("Beefy");
     setShowAllocateModal(false);
 
@@ -557,6 +590,28 @@ const harvestProfit = async () => {
       }}
     >
       <h2>Allocate Funds</h2>
+
+      <div style={{ marginTop: "20px" }}>
+        <label>
+          <b>ID инвестиции</b>
+        </label>
+
+        <br />
+
+        <input
+          type="number"
+          min="0"
+          step="1"
+          value={allocationInvestmentId}
+          onChange={(e) => setAllocationInvestmentId(e.target.value)}
+          style={{
+            width: "100%",
+            padding: "8px",
+            marginTop: "8px",
+            boxSizing: "border-box",
+          }}
+        />
+      </div>
 
       <div style={{ marginTop: "20px" }}>
         <label>

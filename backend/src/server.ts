@@ -3,6 +3,7 @@ import cors from "cors";
 import axios from "axios";
 import pancakeRouter from "./routes/pancakeswap";
 import beefyRoutes from "./routes/beefy";
+import dforceRouter from "./routes/dforce";
 
 const app = express();
 
@@ -10,6 +11,7 @@ app.use(cors());
 app.use(express.json());
 app.use("/api/pancakeswap", pancakeRouter);
 app.use("/api/beefy", beefyRoutes);
+app.use("/api/dforce", dforceRouter);
 
 app.get("/", (_, res) => {
   res.json({
@@ -72,7 +74,6 @@ app.get("/api/pancakeswap/pools", async (_, res) => {
   });
 }
 });
-
 const PORT = 3001;
 
 app.listen(PORT, () => {
