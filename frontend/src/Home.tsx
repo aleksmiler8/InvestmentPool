@@ -113,8 +113,8 @@ setInvestments(list);
       setOccupiedPeriods(occupied);
 
       const activeCount = list.filter(
-        (inv) => inv[5] === true
-      ).length;
+  (inv) => inv.investment[5] === true
+).length;
 
       setInvestmentCount(activeCount);
     } catch (e) {
