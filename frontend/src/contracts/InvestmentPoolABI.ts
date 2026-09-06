@@ -156,7 +156,7 @@ export const InvestmentPoolABI = [
       {
         "indexed": true,
         "internalType": "enum InvestmentPoolV2.Protocol",
-        "name": "from",
+        "name": "protocol",
         "type": "uint8"
       },
       {
@@ -166,7 +166,7 @@ export const InvestmentPoolABI = [
         "type": "uint256"
       }
     ],
-    "name": "LiquidityReturned",
+    "name": "LiquidityInvested",
     "type": "event"
   },
   {
@@ -218,6 +218,43 @@ export const InvestmentPoolABI = [
       }
     ],
     "name": "ProfitHarvested",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "investmentId",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "feeId",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "unlockTime",
+        "type": "uint256"
+      }
+    ],
+    "name": "ReserveFeeLocked",
     "type": "event"
   },
   {
@@ -337,6 +374,19 @@ export const InvestmentPoolABI = [
   },
   {
     "inputs": [],
+    "name": "VUSDT",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
     "name": "WEEK",
     "outputs": [
       {
@@ -362,21 +412,29 @@ export const InvestmentPoolABI = [
     "type": "function"
   },
   {
-    "inputs": [
+    "inputs": [],
+    "name": "aaveAdapter",
+    "outputs": [
       {
-        "internalType": "enum InvestmentPoolV2.Protocol",
-        "name": "protocol",
-        "type": "uint8"
-      },
-      {
-        "internalType": "uint256",
-        "name": "amount",
-        "type": "uint256"
+        "internalType": "contract IProtocolAdapter",
+        "name": "",
+        "type": "address"
       }
     ],
-    "name": "investIntoProtocol",
-    "outputs": [],
-    "stateMutability": "nonpayable",
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "beefyAdapter",
+    "outputs": [
+      {
+        "internalType": "contract IProtocolAdapter",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
     "type": "function"
   },
   {
@@ -395,6 +453,19 @@ export const InvestmentPoolABI = [
     "name": "deposit",
     "outputs": [],
     "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "dforceAdapter",
+    "outputs": [
+      {
+        "internalType": "contract IProtocolAdapter",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
     "type": "function"
   },
   {
@@ -502,6 +573,74 @@ export const InvestmentPoolABI = [
         "internalType": "address",
         "name": "user",
         "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "investmentId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "positionId",
+        "type": "uint256"
+      }
+    ],
+    "name": "getInvestmentPosition",
+    "outputs": [
+      {
+        "internalType": "uint8",
+        "name": "protocol",
+        "type": "uint8"
+      },
+      {
+        "internalType": "uint256",
+        "name": "shares",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "principal",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bool",
+        "name": "active",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "investmentId",
+        "type": "uint256"
+      }
+    ],
+    "name": "getInvestmentPositionCount",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
       }
     ],
     "name": "getInvestor",
@@ -539,11 +678,45 @@ export const InvestmentPoolABI = [
     "inputs": [
       {
         "internalType": "uint256",
+        "name": "feeId",
+        "type": "uint256"
+      }
+    ],
+    "name": "getPendingReserveFeePositionCount",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "investmentId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "enum InvestmentPoolV2.Protocol",
+        "name": "protocol",
+        "type": "uint8"
+      },
+      {
+        "internalType": "uint256",
         "name": "amount",
         "type": "uint256"
       }
     ],
-    "name": "harvestProtocolProfit",
+    "name": "investIntoProtocol",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -567,6 +740,19 @@ export const InvestmentPoolABI = [
     "outputs": [
       {
         "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "pancakeAdapter",
+    "outputs": [
+      {
+        "internalType": "contract IProtocolAdapter",
         "name": "",
         "type": "address"
       }
@@ -680,37 +866,6 @@ export const InvestmentPoolABI = [
     "inputs": [
       {
         "internalType": "uint256",
-        "name": "amount",
-        "type": "uint256"
-      }
-    ],
-    "name": "returnLiquidityToPool",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "enum InvestmentPoolV2.Protocol",
-        "name": "from",
-        "type": "uint8"
-      },
-      {
-        "internalType": "uint256",
-        "name": "amount",
-        "type": "uint256"
-      }
-    ],
-    "name": "returnToPool",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
         "name": "",
         "type": "uint256"
       }
@@ -760,25 +915,12 @@ export const InvestmentPoolABI = [
         "type": "uint8"
       },
       {
-        "internalType": "uint256",
-        "name": "balance",
-        "type": "uint256"
-      }
-    ],
-    "name": "setProtocolBalance",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
         "internalType": "address",
-        "name": "newWallet",
+        "name": "adapter",
         "type": "address"
       }
     ],
-    "name": "setReserveWallet",
+    "name": "setProtocolAdapter",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -797,6 +939,19 @@ export const InvestmentPoolABI = [
       }
     ],
     "name": "setRewardRate",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "token",
+        "type": "address"
+      }
+    ],
+    "name": "setVenusToken",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -857,23 +1012,19 @@ export const InvestmentPoolABI = [
     "inputs": [
       {
         "internalType": "enum InvestmentPoolV2.Protocol",
-        "name": "from",
+        "name": "",
         "type": "uint8"
-      },
-      {
-        "internalType": "enum InvestmentPoolV2.Protocol",
-        "name": "to",
-        "type": "uint8"
-      },
+      }
+    ],
+    "name": "totalProtocolShares",
+    "outputs": [
       {
         "internalType": "uint256",
-        "name": "amount",
+        "name": "",
         "type": "uint256"
       }
     ],
-    "name": "transferBetweenProtocols",
-    "outputs": [],
-    "stateMutability": "nonpayable",
+    "stateMutability": "view",
     "type": "function"
   },
   {
@@ -902,6 +1053,32 @@ export const InvestmentPoolABI = [
     "outputs": [
       {
         "internalType": "contract IERC20",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "venusAdapter",
+    "outputs": [
+      {
+        "internalType": "contract IProtocolAdapter",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "venusToken",
+    "outputs": [
+      {
+        "internalType": "address",
         "name": "",
         "type": "address"
       }
