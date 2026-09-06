@@ -53,9 +53,11 @@ IERC20 public immutable usdt;
     
     address public constant VUSDT =
     0xfD5840Cd36d94D7229439859C0112a4185BC0255;
+    address public venusToken;
 
-IVToken public constant vUSDT =
-    IVToken(VUSDT);
+    function _vUSDT() internal view returns (IVToken) {
+        return IVToken(venusToken);
+    }
 
 address public reserveWallet;
 IProtocolAdapter public beefyAdapter;
@@ -68,6 +70,7 @@ uint256 public totalDeposits;
 uint256 public totalInvestors;
 
 mapping(Protocol => uint256) public protocolBalance;
+    mapping(Protocol => uint256) public totalProtocolShares;
 // Общая сумма прибыли, уже обещанной активным инвесторам,
 // но ещё не выплаченной.
 uint256 public totalPendingRewards;
@@ -90,20 +93,31 @@ uint256 public totalActiveDeposits;
     DForce
 }
 
+    struct Position {
+        Protocol protocol;
+        uint256 shares;
+        uint256 principal;
+        bool active;
+    }
+
     struct Investment {
         uint256 amount;
         uint256 startTime;
         uint256 endTime;
         uint256 period;
         uint256 reward;
+        uint256 allocatedAmount;
         bool active;
         bool finished;
+        Position[] positions;
     }
+
     struct PendingReserveFee {
-    uint256 amount;
-    uint256 unlockTime;
-    bool transferred;
-}
+        uint256 amount;
+        uint256 unlockTime;
+        bool transferred;
+        Position[] positions;
+    }
 
     struct Investor {
         bool exists;
@@ -152,6 +166,13 @@ uint256 public totalActiveDeposits;
     address indexed owner,
     uint256 amount
 );
+event ReserveFeeLocked(
+    address indexed user,
+    uint256 indexed investmentId,
+    uint256 indexed feeId,
+    uint256 amount,
+    uint256 unlockTime
+);
 event LiquidityInvested(
     Protocol indexed protocol,
     uint256 amount
@@ -186,12 +207,12 @@ event ProfitHarvested(
 
 require(reserveAddress != address(0), "Invalid reserve");
 reserveWallet = reserveAddress;
-        rewardRate[DAY] = 10;
-        rewardRate[WEEK] = 80;
-        rewardRate[MONTH] = 350;
-        rewardRate[THREE_MONTHS] = 1200;
-        rewardRate[SIX_MONTHS] = 2800;
-        rewardRate[YEAR] = 3500;
+        rewardRate[DAY] = 3;
+        rewardRate[WEEK] = 25;
+        rewardRate[MONTH] = 65;
+        rewardRate[THREE_MONTHS] = 250;
+        rewardRate[SIX_MONTHS] = 500;
+        rewardRate[YEAR] = 1000;
     }    function deposit(
         uint256 amount,
         uint256 period
@@ -249,8 +270,10 @@ totalPendingRewards += reward;
                 endTime: block.timestamp + period,
                 period: period,
                 reward: reward,
+                allocatedAmount: 0,
                 active: true,
-                finished: false
+                finished: false,
+                positions: new Position[](0)
             })
         );
 
@@ -312,149 +335,87 @@ totalPendingRewards += reward;
             );
         }
     }
-    function investIntoProtocol(
-    Protocol protocol,
-    uint256 amount
-)
-    external
-    onlyOwner
-    nonReentrant
-{
-    require(
-        amount > 0,
-        "Invalid amount"
-    );
-
-    require(
-        protocol != Protocol.Pool &&
-        protocol != Protocol.Reserve,
-        "Invalid protocol"
-    );
-
-    require(
-        protocolBalance[Protocol.Pool] >= amount,
-        "Insufficient Pool balance"
-    );
-
-    IProtocolAdapter adapter;
-
-    if (protocol == Protocol.Aave) {
-
-        adapter = aaveAdapter;
-
-    } else if (protocol == Protocol.DForce) {
-
-        adapter = dforceAdapter;
-
-    } else if (protocol == Protocol.Beefy) {
-
-        adapter = beefyAdapter;
-
-    } else if (protocol == Protocol.Pancake) {
-
-        adapter = pancakeAdapter;
-
-    } else if (protocol == Protocol.Venus) {
-
-        /*
-         * Venus пока работает через существующую
-         * прямую vUSDT-логику.
-         *
-         * Не используем venusAdapter здесь,
-         * пока не сделан отдельный рабочий VenusAdapter.
-         */
-
-        uint256 venusPoolBefore =
-    usdt.balanceOf(address(this));
-
-        usdt.forceApprove(
-            VUSDT,
-            amount
-        );
-
-        uint256 result =
-            vUSDT.mint(amount);
-
-        require(
-            result == 0,
-            "Venus mint failed"
-        );
-
-        uint256 venusPoolAfter =
-    usdt.balanceOf(address(this));
-
-        uint256 venusActualDeposited =
-    venusPoolBefore - venusPoolAfter;
-
-        require(
-    venusActualDeposited == amount,
-    "Venus deposited wrong amount"
-    );
-
-        protocolBalance[Protocol.Pool] -=
-            amount;
-
-        protocolBalance[Protocol.Venus] +=
-            amount;
-
-        return;
-
-    } else {
-
-        revert(
-            "Invalid protocol"
-        );
+    function _adapterFor(Protocol protocol) internal view returns (IProtocolAdapter adapter) {
+        if (protocol == Protocol.Aave) return aaveAdapter;
+        if (protocol == Protocol.DForce) return dforceAdapter;
+        if (protocol == Protocol.Beefy) return beefyAdapter;
+        if (protocol == Protocol.Pancake) return pancakeAdapter;
+        revert("Unsupported protocol");
     }
 
-    require(
-        address(adapter) != address(0),
-        "Adapter not set"
-    );
+    function _protocolAssets(Protocol protocol) internal view returns (uint256) {
+    if (protocol == Protocol.Venus) {
+        uint256 shares = _vUSDT().balanceOf(address(this));
+        if (shares == 0) return 0;
 
-    /*
-     * Adapter.deposit() uses transferFrom(),
-     * therefore InvestmentPool must approve it.
-     */
+        uint256 exchangeRate = _vUSDT().exchangeRateStored();
+        return (shares * exchangeRate) / 1e18;
+    }
 
-    usdt.forceApprove(
-        address(adapter),
-        amount
-    );
+    IProtocolAdapter adapter = _adapterFor(protocol);
+    if (address(adapter) == address(0)) return 0;
 
-    uint256 poolBefore =
-        usdt.balanceOf(address(this));
-
-    adapter.deposit(amount);
-
-    uint256 poolAfter =
-        usdt.balanceOf(address(this));
-
-    uint256 actualDeposited =
-        poolBefore - poolAfter;
-
-    require(
-        actualDeposited == amount,
-        "Adapter deposited wrong amount"
-    );
-
-    protocolBalance[Protocol.Pool] -=
-        amount;
-
-    /*
-     * Do NOT invent profit here.
-     *
-     * Principal accounting only.
-     */
-
-    protocolBalance[protocol] +=
-        amount;
-
-    emit LiquidityInvested(
-    protocol,
-    amount
-);
-
+    try adapter.totalAssets() returns (uint256 assets) {
+        return assets;
+    } catch {
+        return 0;
+    }
 }
+
+    function _addPosition(Investment storage inv, Protocol protocol, uint256 amount, uint256 assetsBefore) internal {
+        uint256 supply = totalProtocolShares[protocol];
+        uint256 shares = (supply == 0 || assetsBefore == 0) ? amount : (amount * supply) / assetsBefore;
+        require(shares > 0, "Zero shares");
+        inv.positions.push(Position({protocol: protocol, shares: shares, principal: amount, active: true}));
+        totalProtocolShares[protocol] += shares;
+        inv.allocatedAmount += amount;
+        protocolBalance[Protocol.Pool] -= amount;
+        protocolBalance[protocol] += amount;
+    }
+
+    function investIntoProtocol(
+        address user,
+        uint256 investmentId,
+        Protocol protocol,
+        uint256 amount
+    ) external onlyOwner nonReentrant {
+        require(user != address(0), "Invalid user");
+        require(investmentId < investors[user].investments.length, "Invalid investment");
+        require(amount > 0, "Invalid amount");
+        require(protocol != Protocol.Pool && protocol != Protocol.Reserve, "Invalid protocol");
+
+        Investment storage inv = investors[user].investments[investmentId];
+        require(inv.active && !inv.finished, "Investment inactive");
+        require(inv.allocatedAmount + amount <= inv.amount, "Amount exceeds investment");
+
+        uint256 assetsBefore = _protocolAssets(protocol);
+
+        if (protocol == Protocol.Venus) {
+            uint256 beforeShares = _vUSDT().balanceOf(address(this));
+            usdt.forceApprove(venusToken, amount);
+            require(_vUSDT().mint(amount) == 0, "Venus mint failed");
+            uint256 minted = _vUSDT().balanceOf(address(this)) - beforeShares;
+            require(minted > 0, "Zero Venus shares");
+            uint256 supply = totalProtocolShares[protocol];
+            uint256 shares = (supply == 0 || assetsBefore == 0) ? amount : (amount * supply) / assetsBefore;
+            inv.positions.push(Position({protocol: protocol, shares: shares, principal: amount, active: true}));
+            totalProtocolShares[protocol] += shares;
+            inv.allocatedAmount += amount;
+            protocolBalance[Protocol.Pool] -= amount;
+            protocolBalance[protocol] += amount;
+            emit LiquidityInvested(protocol, amount);
+            return;
+        }
+
+        IProtocolAdapter adapter = _adapterFor(protocol);
+        require(address(adapter) != address(0), "Adapter not set");
+        usdt.forceApprove(address(adapter), amount);
+        uint256 poolBefore = usdt.balanceOf(address(this));
+        adapter.deposit(amount);
+        require(poolBefore - usdt.balanceOf(address(this)) == amount, "Adapter deposited wrong amount");
+        _addPosition(inv, protocol, amount, assetsBefore);
+        emit LiquidityInvested(protocol, amount);
+    }
 
     function getInvestmentCount(address user)
         external
@@ -493,6 +454,29 @@ totalPendingRewards += reward;
         );
     }
 
+    function getInvestmentPositionCount(address user, uint256 investmentId)
+        external
+        view
+        returns (uint256)
+    {
+        require(investmentId < investors[user].investments.length, "Invalid investment");
+        return investors[user].investments[investmentId].positions.length;
+    }
+
+    function getInvestmentPosition(address user, uint256 investmentId, uint256 positionId)
+        external
+        view
+        returns (uint8 protocol, uint256 shares, uint256 principal, bool active)
+    {
+        require(investmentId < investors[user].investments.length, "Invalid investment");
+        Position storage p = investors[user].investments[investmentId].positions[positionId];
+        return (uint8(p.protocol), p.shares, p.principal, p.active);
+    }
+
+    function getPendingReserveFeePositionCount(uint256 feeId) external view returns (uint256) {
+        return pendingReserveFees[feeId].positions.length;
+    }
+
     /*
      * ============================================================
      * REAL LIQUIDITY RECOVERY
@@ -519,7 +503,7 @@ totalPendingRewards += reward;
         returns (uint256)
     {
         if (protocol == Protocol.Venus) {
-            try vUSDT.balanceOfUnderlying(address(this))
+            try _vUSDT().balanceOfUnderlying(address(this))
                 returns (uint256 assets)
             {
                 return assets;
@@ -559,222 +543,43 @@ totalPendingRewards += reward;
         return 0;
     }
 
-    function _withdrawFromProtocol(
+    function _withdrawFromProtocolRaw(
         Protocol protocol,
         uint256 amount
-    )
-        internal
-        returns (uint256 actual)
-    {
-        if (amount == 0) {
-            return 0;
-        }
-
-        uint256 beforeBalance =
-            usdt.balanceOf(address(this));
+    ) internal returns (uint256 actual) {
+        if (amount == 0) return 0;
+        uint256 beforeBalance = usdt.balanceOf(address(this));
 
         if (protocol == Protocol.Venus) {
-            uint256 available =
-                _protocolAvailableAssets(Protocol.Venus);
-
-            uint256 request =
-                available < amount
-                ? available
-                : amount;
-
-            if (request == 0) {
-                return 0;
-            }
-
-            /*
-             * Use the proven Venus guard from the old working
-             * contract.  Do not call redeemUnderlying() when the
-             * requested underlying amount rounds to zero vUSDT.
-             */
-            uint256 exchangeRate =
-                vUSDT.exchangeRateStored();
-
-            if (exchangeRate == 0) {
-                return 0;
-            }
-
-            uint256 redeemTokens =
-                (request * 1e18) /
-                exchangeRate;
-
-            if (redeemTokens == 0) {
-                return 0;
-            }
-
-            try vUSDT.redeemUnderlying(
-                request
-            )
-                returns (uint256 result)
-            {
-                if (result != 0) {
-                    return 0;
-                }
-            } catch {
-                return 0;
-            }
-
+            uint256 available = _protocolAvailableAssets(Protocol.Venus);
+            uint256 request = available < amount ? available : amount;
+            if (request == 0) return 0;
+            uint256 exchangeRate = _vUSDT().exchangeRateStored();
+            if (exchangeRate == 0) return 0;
+            uint256 redeemTokens = (request * 1e18) / exchangeRate;
+            if (redeemTokens == 0) return 0;
+            try _vUSDT().redeemUnderlying(request) returns (uint256 result) {
+                if (result != 0) return 0;
+            } catch { return 0; }
         } else if (protocol == Protocol.Aave) {
-            if (address(aaveAdapter) == address(0)) {
-                return 0;
-            }
-
-            uint256 available =
-                _protocolAvailableAssets(Protocol.Aave);
-
-            uint256 request =
-                available < amount
-                ? available
-                : amount;
-
-            if (request == 0) {
-                return 0;
-            }
-
-            try aaveAdapter.withdraw(request)
-                returns (uint256)
-            {
-            } catch {
-                return 0;
-            }
-
+            if (address(aaveAdapter) == address(0)) return 0;
+            uint256 available = _protocolAvailableAssets(Protocol.Aave);
+            uint256 request = available < amount ? available : amount;
+            if (request == 0) return 0;
+            try aaveAdapter.withdraw(request) returns (uint256) {} catch { return 0; }
         } else if (protocol == Protocol.DForce) {
-
-            if (address(dforceAdapter) == address(0)) {
-                return 0;
-            }
-
-            uint256 available =
-                _protocolAvailableAssets(Protocol.DForce);
-
-            uint256 request =
-                available < amount
-                ? available
-                : amount;
-
-            if (request == 0) {
-                return 0;
-            }
-
-            try dforceAdapter.withdraw(request)
-                returns (uint256)
-            {
-            } catch {
-                return 0;
-            }
-
+            if (address(dforceAdapter) == address(0)) return 0;
+            uint256 available = _protocolAvailableAssets(Protocol.DForce);
+            uint256 request = available < amount ? available : amount;
+            if (request == 0) return 0;
+            try dforceAdapter.withdraw(request) returns (uint256) {} catch { return 0; }
         } else {
             return 0;
         }
 
-        uint256 afterBalance =
-            usdt.balanceOf(address(this));
-
-        if (afterBalance <= beforeBalance) {
-            return 0;
-        }
-
+        uint256 afterBalance = usdt.balanceOf(address(this));
+        if (afterBalance <= beforeBalance) return 0;
         return afterBalance - beforeBalance;
-    }
-
-    function _accountRecoveredLiquidity(
-        Protocol protocol,
-        uint256 amount
-    )
-        internal
-    {
-        if (amount == 0) {
-            return;
-        }
-
-        uint256 recordedPrincipal =
-            protocolBalance[protocol];
-
-        uint256 principalReturned =
-            amount < recordedPrincipal
-            ? amount
-            : recordedPrincipal;
-
-        if (principalReturned > 0) {
-            protocolBalance[protocol] -=
-                principalReturned;
-        }
-
-        /*
-         * Any USDT that physically returned to Pool is real Pool
-         * liquidity. We do not invent protocol profit here.
-         */
-        protocolBalance[Protocol.Pool] +=
-            amount;
-    }
-
-    function _recoverLiquidity(
-        uint256 required
-    )
-        internal
-        returns (uint256 recovered)
-    {
-        if (required == 0) {
-            return 0;
-        }
-
-        /*
-         * Only Venus and Aave are currently real/usable.
-         * This is not a business priority order; it is simply the
-         * current list of implemented recovery sources.
-         */
-        Protocol[3] memory protocols = [
-    Protocol.Venus,
-    Protocol.Aave,
-    Protocol.DForce
-];
-
-        for (uint256 i = 0; i < protocols.length; i++) {
-            if (recovered >= required) {
-                break;
-            }
-
-            Protocol protocol =
-                protocols[i];
-
-            uint256 available =
-                _protocolAvailableAssets(protocol);
-
-            if (available == 0) {
-                continue;
-            }
-
-            uint256 remaining =
-                required - recovered;
-
-            uint256 request =
-                available < remaining
-                ? available
-                : remaining;
-
-            uint256 actual =
-                _withdrawFromProtocol(
-                    protocol,
-                    request
-                );
-
-            if (actual == 0) {
-                continue;
-            }
-
-            _accountRecoveredLiquidity(
-                protocol,
-                actual
-            );
-
-            recovered += actual;
-        }
-
-        return recovered;
     }
 
     /*
@@ -792,234 +597,79 @@ totalPendingRewards += reward;
      * the current investment's promised reward is sent to Reserve.
      */
 
-    function _ensurePrincipalLiquidity(
-        uint256 principal
-    )
-        internal
-    {
-        uint256 poolBalance =
-            usdt.balanceOf(address(this));
-
-        if (poolBalance < principal) {
-            _recoverLiquidity(
-                principal - poolBalance
-            );
-        }
-
-        require(
-            usdt.balanceOf(address(this)) >= principal,
-            "Insufficient principal liquidity"
-        );
+    function _positionValue(Position storage position) internal view returns (uint256) {
+        if (!position.active || position.shares == 0) return 0;
+        uint256 supply = totalProtocolShares[position.protocol];
+        if (supply == 0) return 0;
+        uint256 assets = _protocolAssets(position.protocol);
+        return (assets * position.shares) / supply;
     }
 
-    function _venusRealProfit()
-        internal
-        returns (uint256 profit)
-    {
-        uint256 assets =
-            vUSDT.balanceOfUnderlying(
-                address(this)
-            );
-
-        uint256 principal =
-            protocolBalance[Protocol.Venus];
-
-        if (assets > principal) {
-            profit =
-                assets - principal;
+    function _recordProtocolWithdrawal(
+        Protocol protocol,
+        uint256 principal,
+        uint256 shares
+    ) internal {
+        if (shares > totalProtocolShares[protocol]) {
+            totalProtocolShares[protocol] = 0;
+        } else {
+            totalProtocolShares[protocol] -= shares;
         }
-
-        return profit;
+        uint256 recorded = protocolBalance[protocol];
+        protocolBalance[protocol] = recorded > principal ? recorded - principal : 0;
+        // The returned amount is already earmarked for the current withdrawal
+        // (user payout or Reserve), so it must not be counted as idle Pool funds.
     }
 
-    function _aaveRealProfit()
-        internal
-         view
-        returns (uint256 profit)
-    {
-        IProtocolAdapter adapter =
-            aaveAdapter;
-
-        if (address(adapter) == address(0)) {
-            return 0;
-        }
-
-        uint256 assets;
-
-        try adapter.totalAssets()
-            returns (uint256 value)
-        {
-            assets = value;
-        } catch {
-            return 0;
-        }
-
-        uint256 principal =
-            protocolBalance[Protocol.Aave];
-
-        if (assets > principal) {
-            profit =
-                assets - principal;
-        }
-
-        return profit;
-    }
-    function _dforceRealProfit()
-        internal
-        view
-        returns (uint256 profit)
-    {
-        IProtocolAdapter adapter =
-            dforceAdapter;
-
-        if (address(adapter) == address(0)) {
-            return 0;
-        }
-
-        uint256 assets;
-
-        try adapter.totalAssets()
-            returns (uint256 value)
-        {
-            assets = value;
-        } catch {
-            return 0;
-        }
-
-        uint256 principal =
-            protocolBalance[Protocol.DForce];
-
-        if (assets > principal) {
-            profit =
-                assets - principal;
-        }
-
-        return profit;
+    function _withdrawPositionFull(Position storage position)
+    internal
+    returns (uint256 actual)
+{
+    if (!position.active || position.shares == 0) {
+        return 0;
     }
 
-    function _poolRealProfit()
-        internal
-        view
-        returns (uint256 profit)
-    {
-        uint256 activePrincipal =
-            totalActiveDeposits;
+    uint256 value = _positionValue(position);
 
-        uint256 poolAssets =
-            usdt.balanceOf(address(this));
-
-        if (poolAssets > activePrincipal) {
-            profit =
-                poolAssets - activePrincipal;
-        }
-
-        return profit;
+    if (value == 0) {
+        return 0;
     }
 
-    function _realProtocolProfit()
-        internal
-        returns (uint256 profit)
-    {
-        profit +=
-            _venusRealProfit();
+    actual = _withdrawFromProtocolRaw(
+        position.protocol,
+        value
+    );
 
-        profit +=
-            _aaveRealProfit();
+    require(
+        actual > 0,
+        "Position withdrawal failed"
+    );
 
-        
-        profit +=
-            _dforceRealProfit();
+    _recordProtocolWithdrawal(
+        position.protocol,
+        position.principal,
+        position.shares
+    );
 
-        profit +=
-            _poolRealProfit();
+    position.shares = 0;
+    position.principal = 0;
+    position.active = false;
+}
 
-        return profit;
-    }
-
-    function _recoverWithdrawalLiquidity(
-        uint256 payout,
-        uint256 reserveProfit
-    )
-        internal
-        returns (uint256 recovered)
-    {
-        uint256 available =
-            usdt.balanceOf(address(this));
-
-        uint256 required =
-            payout + reserveProfit;
-
-        if (available >= required) {
-            return 0;
-        }
-
-        return _recoverLiquidity(
-            required - available
-        );
-    }
-
-    function _finishWithdrawalAccounting(
+    function _finishInvestmentAccounting(
         Investor storage investor,
         Investment storage inv,
         uint256 actualPayout,
         uint256 actualReward
-    )
-        internal
-    {
-        uint256 poolRecorded =
-            protocolBalance[Protocol.Pool];
-
-        if (poolRecorded >= actualPayout) {
-            protocolBalance[Protocol.Pool] -=
-                actualPayout;
-        } else {
-            protocolBalance[Protocol.Pool] = 0;
-        }
-
-        investor.totalWithdrawn +=
-            actualPayout;
-
-        investor.totalReward +=
-            actualReward;
-
-        totalActiveDeposits -=
-            inv.amount;
-
-        if (totalPendingRewards >= inv.reward) {
-            totalPendingRewards -=
-                inv.reward;
-        } else {
-            totalPendingRewards = 0;
-        }
-
+    ) internal {
+        investor.totalWithdrawn += actualPayout;
+        investor.totalReward += actualReward;
+        if (totalActiveDeposits >= inv.amount) totalActiveDeposits -= inv.amount;
+        else totalActiveDeposits = 0;
+        if (totalPendingRewards >= inv.reward) totalPendingRewards -= inv.reward;
+        else totalPendingRewards = 0;
         inv.active = false;
         inv.finished = true;
-    }
-
-    function _sendReserveProfit(
-        uint256 reserveProfit
-    )
-        internal
-    {
-        if (reserveProfit == 0) {
-            return;
-        }
-
-        require(
-            usdt.balanceOf(address(this)) >=
-            reserveProfit,
-            "Insufficient reserve liquidity"
-        );
-
-        usdt.safeTransfer(
-            reserveWallet,
-            reserveProfit
-        );
-
-        emit ProfitHarvested(
-            Protocol.Pool,
-            reserveProfit
-        );
     }
 
     function withdraw(uint256 investmentId)
@@ -1027,214 +677,348 @@ totalPendingRewards += reward;
         whenNotPaused
         nonReentrant
     {
-        Investor storage investor =
-            investors[msg.sender];
+        Investor storage investor = investors[msg.sender];
+        require(investmentId < investor.investments.length, "Invalid investment");
+        Investment storage inv = investor.investments[investmentId];
+        require(inv.active && !inv.finished, "Investment inactive");
+        require(block.timestamp >= inv.endTime, "Investment not finished");
 
-        require(
-            investmentId < investor.investments.length,
-            "Invalid investment"
-        );
+        uint256 allocatedPrincipal = inv.allocatedAmount;
+        uint256 unallocatedPrincipal = inv.amount - allocatedPrincipal;
 
-        Investment storage inv =
-            investor.investments[investmentId];
-
-        require(
-            inv.active,
-            "Investment inactive"
-        );
-
-        require(
-            !inv.finished,
-            "Already withdrawn"
-        );
-
-        require(
-            block.timestamp >= inv.endTime,
-            "Investment not finished"
-        );
-
-        uint256 principal =
-            inv.amount;
-
-        uint256 promisedReward =
-            inv.reward;
-
-        /*
-         * Measure real profit BEFORE moving liquidity.
-         * This is the proven Venus behavior: real protocol
-         * assets minus recorded principal.
-         */
-        uint256 realProfit =
-            _realProtocolProfit();
-
-        uint256 actualReward =
-            realProfit < promisedReward
-            ? realProfit
-            : promisedReward;
-
-        uint256 reserveProfit = 0;
-
-        if (realProfit > promisedReward) {
-            reserveProfit =
-                realProfit -
-                promisedReward;
-        }
-
-        uint256 payout =
-            principal +
-            actualReward;
-
-        /*
-         * Principal + user's real reward + Reserve surplus must
-         * become real USDT in the Pool before transfers.
-         *
-         * Recovery uses the actual Venus/Aave positions.  If the
-         * real profit is insufficient, Reserve receives zero.
-         */
-        _recoverWithdrawalLiquidity(
-            payout,
-            reserveProfit
-        );
-
-        require(
-            usdt.balanceOf(address(this)) >= payout,
-            "Insufficient real liquidity"
-        );
-
-        _finishWithdrawalAccounting(
-            investor,
-            inv,
-            payout,
-            actualReward
-        );
-
-        /*
-         * User is paid first.
-         */
-        usdt.safeTransfer(
-            msg.sender,
-            payout
-        );
-
-        /*
-         * Only genuine surplus above this investment's promised
-         * reward goes to Reserve.  Reserve never covers a shortfall.
-         */
-        _sendReserveProfit(
-            reserveProfit
-        );
-
-        emit Withdrawn(
-            msg.sender,
-            investmentId,
-            inv.amount,
-            actualReward
-        );
-    }
-
-
-    function earlyWithdraw(uint256 investmentId)
-        external
-        whenNotPaused
-        nonReentrant
-    {
-        Investor storage investor =
-            investors[msg.sender];
-
-        require(
-            investmentId < investor.investments.length,
-            "Invalid investment"
-        );
-
-        Investment storage inv =
-            investor.investments[investmentId];
-
-        require(
-            inv.active,
-            "Investment inactive"
-        );
-
-        require(
-            !inv.finished,
-            "Already withdrawn"
-        );
-
-        require(
-            block.timestamp < inv.endTime,
-            "Use normal withdraw"
-        );
-
-        uint256 fee =
-            (inv.amount * earlyWithdrawFee) /
-            10000;
-
-        uint256 payout =
-            inv.amount - fee;
-
-        /*
-         * Early withdrawal uses the same real-liquidity recovery.
-         * The fee stays locked until the original end time.
-         */
-        uint256 realBalance =
-            usdt.balanceOf(address(this));
-
-        if (realBalance < payout) {
-            _recoverLiquidity(
-                payout - realBalance
+        // The unallocated part belongs to this investment's Pool balance.
+        // It is never recovered from another investment's protocol position.
+        if (unallocatedPrincipal > 0) {
+            require(
+                protocolBalance[Protocol.Pool] >= unallocatedPrincipal,
+                "Insufficient Pool balance"
             );
         }
 
+        // Recover only this investment's positions.
+        // Never use another investment's protocol position.
+        uint256 recovered;
+        for (uint256 i = 0; i < inv.positions.length; i++) {
+            recovered += _withdrawPositionFull(inv.positions[i]);
+        }
+
+        // Calculate the reward from the amount actually recovered.
+        // If the protocol earned less than the promised reward,
+        // pay only the real profit instead of reverting.
+        uint256 available =
+            recovered + unallocatedPrincipal;
+
+        uint256 actualReward = 0;
+
+        if (available > inv.amount) {
+            actualReward =
+                available - inv.amount;
+
+            if (actualReward > inv.reward) {
+                actualReward = inv.reward;
+            }
+        }
+
+        uint256 payout =
+            inv.amount + actualReward;
+
         require(
-            usdt.balanceOf(address(this)) >= payout,
-            "Insufficient real liquidity"
+            available >= payout,
+            "Insufficient investment liquidity"
         );
 
-        inv.active = false;
-        inv.finished = true;
-
-        pendingReserveFees.push(
-            PendingReserveFee({
-                amount: fee,
-                unlockTime: inv.endTime,
-                transferred: false
-            })
-        );
-
-        uint256 poolRecorded =
-            protocolBalance[Protocol.Pool];
-
-        if (poolRecorded >= payout) {
-            protocolBalance[Protocol.Pool] -=
-                payout;
-        } else {
-            protocolBalance[Protocol.Pool] = 0;
+        if (unallocatedPrincipal > 0) {
+            protocolBalance[Protocol.Pool] -= unallocatedPrincipal;
         }
 
-        totalActiveDeposits -=
-            inv.amount;
+        _finishInvestmentAccounting(investor, inv, payout, actualReward);
+        usdt.safeTransfer(msg.sender, payout);
 
-        if (totalPendingRewards >= inv.reward) {
-            totalPendingRewards -=
-                inv.reward;
-        } else {
-            totalPendingRewards = 0;
+        uint256 reserveProfit = 0;
+
+        if (available > inv.amount + inv.reward) {
+            reserveProfit =
+                available - inv.amount - inv.reward;
+        }
+        if (reserveProfit > 0) {
+            require(
+                usdt.balanceOf(address(this)) >= reserveProfit,
+                "Insufficient reserve liquidity"
+            );
+            usdt.safeTransfer(reserveWallet, reserveProfit);
+            emit ProfitHarvested(Protocol.Pool, reserveProfit);
         }
 
-        investor.totalWithdrawn +=
-            payout;
-
-        usdt.safeTransfer(
-            msg.sender,
-            payout
-        );
-
-        emit EarlyWithdraw(
-            msg.sender,
-            investmentId,
-            payout
-        );
+        emit Withdrawn(msg.sender, investmentId, inv.amount, actualReward);
     }
 
+function earlyWithdraw(uint256 investmentId)
+    external
+    whenNotPaused
+    nonReentrant
+{
+    Investor storage investor = investors[msg.sender];
+
+    require(
+        investmentId < investor.investments.length,
+        "Invalid investment"
+    );
+
+    Investment storage inv =
+        investor.investments[investmentId];
+
+    require(
+        inv.active && !inv.finished,
+        "Investment inactive"
+    );
+
+    require(
+        block.timestamp < inv.endTime,
+        "Use normal withdraw"
+    );
+
+    // ============================================================
+    // EARLY WITHDRAWAL
+    //
+    // User receives exactly 85% of principal.
+    // User receives ZERO profit.
+    //
+    // Everything else remains attached to this exact investment:
+    //   - 15% of principal
+    //   - all profit already earned
+    //   - all future profit until original endTime
+    //
+    // At maturity the complete remaining position goes to Reserve.
+    // ============================================================
+
+    uint256 fee =
+        (inv.amount * earlyWithdrawFee) / 10000;
+
+    uint256 payout =
+        inv.amount - fee;
+
+    uint256 allocatedPrincipal =
+        inv.allocatedAmount;
+
+    uint256 unallocatedPrincipal =
+        inv.amount - allocatedPrincipal;
+
+    // ============================================================
+    // UNALLOCATED PART
+    // ============================================================
+
+    uint256 unallocatedFee = 0;
+    uint256 unallocatedPayout = 0;
+
+    if (unallocatedPrincipal > 0) {
+
+        unallocatedFee =
+            (unallocatedPrincipal * earlyWithdrawFee) / 10000;
+
+        unallocatedPayout =
+            unallocatedPrincipal - unallocatedFee;
+
+        require(
+            protocolBalance[Protocol.Pool] >= unallocatedPayout,
+            "Insufficient Pool balance"
+        );
+
+        protocolBalance[Protocol.Pool] -=
+            unallocatedPayout;
+    }
+
+    // ============================================================
+    // PRIVATE RESERVE RECORD FOR THIS INVESTMENT
+    // ============================================================
+
+    PendingReserveFee storage pending =
+        pendingReserveFees.push();
+
+    pending.amount =
+        unallocatedFee;
+
+    pending.unlockTime =
+        inv.endTime;
+
+    pending.transferred =
+        false;
+
+    uint256 feeId =
+        pendingReserveFees.length - 1;
+
+    emit ReserveFeeLocked(
+        msg.sender,
+        investmentId,
+        feeId,
+        fee,
+        inv.endTime
+    );
+
+    // Amount still required from protocol positions
+    // for the user's 85% payout.
+    uint256 remainingUserPayout =
+        payout - unallocatedPayout;
+
+    // ============================================================
+    // PROCESS ONLY THIS INVESTMENT'S POSITIONS
+    // ============================================================
+
+    for (
+        uint256 i = 0;
+        i < inv.positions.length;
+        i++
+    ) {
+
+        Position storage p =
+            inv.positions[i];
+
+        if (!p.active || p.shares == 0) {
+            continue;
+        }
+
+        uint256 supplyBefore =
+            totalProtocolShares[p.protocol];
+
+        uint256 assetsBefore =
+            _protocolAssets(p.protocol);
+
+        require(
+            supplyBefore > 0 &&
+            assetsBefore > 0,
+            "Insufficient position liquidity"
+        );
+
+        // ========================================================
+        // THIS POSITION'S PRINCIPAL SPLIT
+        // ========================================================
+
+        uint256 userPrincipal =
+            (p.principal * (10000 - earlyWithdrawFee)) / 10000;
+
+        uint256 reservePrincipal =
+            p.principal - userPrincipal;
+
+        require(
+            assetsBefore >= userPrincipal,
+            "Insufficient position liquidity"
+        );
+
+        // ========================================================
+        // USER GETS ONLY 85% PRINCIPAL
+        //
+        // The protocol withdrawal is value-based.
+        // We do NOT withdraw the user's "profit".
+        //
+        // Shares are reduced proportionally so that other
+        // investments using the same protocol remain isolated.
+        // ========================================================
+
+        uint256 sharesToWithdraw =
+            (userPrincipal * supplyBefore) / assetsBefore;
+
+        if (
+            sharesToWithdraw == 0 &&
+            userPrincipal > 0
+        ) {
+            sharesToWithdraw = 1;
+        }
+
+        require(
+            sharesToWithdraw < p.shares ||
+            userPrincipal == assetsBefore,
+            "Insufficient position liquidity"
+        );
+
+        uint256 actual =
+            _withdrawFromProtocolRaw(
+                p.protocol,
+                userPrincipal
+            );
+
+        require(
+            actual == userPrincipal,
+            "Early withdrawal amount mismatch"
+        );
+
+        _recordProtocolWithdrawal(
+            p.protocol,
+            userPrincipal,
+            sharesToWithdraw
+        );
+
+        // ========================================================
+        // EVERYTHING LEFT IN THIS POSITION BELONGS TO RESERVE
+        //
+        // The remaining shares represent:
+        //   15% principal
+        //   + already earned profit
+        //   + future profit
+        // ========================================================
+
+        uint256 reserveShares =
+            p.shares - sharesToWithdraw;
+
+        if (reserveShares > 0) {
+
+            pending.positions.push(
+                Position({
+                    protocol: p.protocol,
+                    shares: reserveShares,
+                    principal: reservePrincipal,
+                    active: true
+                })
+            );
+        }
+
+        // ========================================================
+        // ACCOUNT FOR USER PAYOUT
+        // ========================================================
+
+        if (actual >= remainingUserPayout) {
+            remainingUserPayout = 0;
+        } else {
+            remainingUserPayout -= actual;
+        }
+
+        // Close original investment position.
+        p.shares = 0;
+        p.principal = 0;
+        p.active = false;
+    }
+
+    // ============================================================
+    // USER MUST RECEIVE EXACTLY 85% OF PRINCIPAL
+    // ============================================================
+
+    require(
+        remainingUserPayout == 0,
+        "Insufficient investment liquidity"
+    );
+
+    // Zero reward on early withdrawal.
+    _finishInvestmentAccounting(
+        investor,
+        inv,
+        payout,
+        0
+    );
+
+    usdt.safeTransfer(
+        msg.sender,
+        payout
+    );
+
+    emit EarlyWithdraw(
+        msg.sender,
+        investmentId,
+        payout
+    );
+}
+
+function setVenusToken(address token) external onlyOwner {
+    require(token != address(0), "Invalid Venus token");
+    venusToken = token;
+}
 
 function setEarlyWithdrawFee(uint256 fee)
     external
@@ -1283,40 +1067,40 @@ function pause()
 }
 function processPendingReserveFees()
     public
+    nonReentrant
 {
-    uint256 totalAmount = 0;
-    uint256 length = pendingReserveFees.length;
-
-    for (uint256 i = 0; i < length; i++) {
-
+    uint256 processed;
+    for (uint256 i = 0; i < pendingReserveFees.length; i++) {
         PendingReserveFee storage fee = pendingReserveFees[i];
+        if (fee.transferred || block.timestamp < fee.unlockTime) continue;
 
-        if (
-            !fee.transferred &&
-            block.timestamp >= fee.unlockTime
-        ) {
-            totalAmount += fee.amount;
-            fee.transferred = true;
+        uint256 totalReturned;
+        for (uint256 j = 0; j < fee.positions.length; j++) {
+            totalReturned += _withdrawPositionFull(fee.positions[j]);
         }
+
+        // fee.amount is the part that was still in Pool because it had not
+        // been allocated. Position returns contain the allocated fee share
+        // plus any yield earned by that fee share.
+        uint256 reserveAmount = fee.amount + totalReturned;
+        require(
+            reserveAmount > 0,
+            "Reserve fee has no liquidity"
+        );
+        require(
+            usdt.balanceOf(address(this)) >= reserveAmount,
+            "Reserve liquidity missing"
+        );
+
+        fee.transferred = true;
+        processed += reserveAmount;
     }
-    require(totalAmount > 0, "No fees available");
-require(
-    protocolBalance[Protocol.Pool] >= totalAmount,
-    "Insufficient pool balance"
-);
 
-protocolBalance[Protocol.Pool] -= totalAmount;
-
-usdt.safeTransfer(
-    reserveWallet,
-    totalAmount
-);
-
-emit FeesWithdrawn(
-    reserveWallet,
-    totalAmount
-);
+    require(processed > 0, "No fees available");
+    usdt.safeTransfer(reserveWallet, processed);
+    emit FeesWithdrawn(reserveWallet, processed);
 }
+
 function processReserveFees()
     external
     onlyOwner
