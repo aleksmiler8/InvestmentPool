@@ -67,6 +67,14 @@ const [fromProtocol, setFromProtocol] = useState("Beefy");
 const [toProtocol, setToProtocol] = useState("Venus");
 const [amount, setAmount] = useState("");
 const [allocationInvestmentId, setAllocationInvestmentId] = useState("0");
+const [activeInvestments, setActiveInvestments] = useState<
+  {
+    id: number;
+    amount: string;
+    remaining: string;
+    endTime: number;
+  }[]
+>([]);
 const [protocolBalances, setProtocolBalances] = useState({
   Pool: "0",
   Reserve: "0",
@@ -96,6 +104,66 @@ const [protocolPool, setProtocolPool] = useState({
    Aave: "-",
     DForce: "-",
 });
+const loadActiveInvestments = async () => {
+  try {
+    const contract = await getContract();
+    const signer = await getSigner();
+    const user = await signer.getAddress();
+
+    const count = await contract.getInvestmentCount(user);
+    const investments = [];
+
+    for (let i = 0; i < Number(count); i++) {
+      const investment = await contract.getInvestment(user, i);
+
+      if (investment.active && !investment.finished) {
+        const positionCount = await contract.getInvestmentPositionCount(
+          user,
+          i
+        );
+
+        let allocated = 0n;
+
+        for (let p = 0; p < Number(positionCount); p++) {
+          const position = await contract.getInvestmentPosition(
+            user,
+            i,
+            p
+          );
+
+          if (position.active) {
+            allocated += position.principal;
+          }
+        }
+
+        const amount = investment.amount;
+        const remaining =
+          amount > allocated ? amount - allocated : 0n;
+
+        if (remaining > 0n) {
+          investments.push({
+            id: i,
+            amount: ethers.formatUnits(amount, 18),
+            remaining: ethers.formatUnits(remaining, 18),
+            endTime: Number(investment.endTime),
+          });
+        }
+      }
+    }
+
+    setActiveInvestments(investments);
+
+    if (investments.length > 0) {
+      setAllocationInvestmentId(String(investments[0].id));
+    } else {
+      setAllocationInvestmentId("0");
+    }
+  } catch (e) {
+    console.error("Failed to load active investments:", e);
+    setActiveInvestments([]);
+    setAllocationInvestmentId("0");
+  }
+};
 const loadLiquidity = async () => {
   try {
     const contract = await getContract();
@@ -128,6 +196,7 @@ const dforce = await contract.protocolBalance(6);
 useEffect(() => {
   loadLiquidity();
   loadApy();
+  loadActiveInvestments();
 }, []);
    const loadApy = async () => {
   const [markets, vaults, pools, aaveMarkets, dforceMarkets] = await Promise.allSettled([
@@ -296,6 +365,7 @@ const allocateFunds = async () => {
     await loadUser();
     await loadStatistics();
     await loadLiquidity();
+    await loadActiveInvestments();
   } catch (e) {
     console.error(e);
     toast.error("Allocation failed");
@@ -593,24 +663,31 @@ const harvestProfit = async () => {
 
       <div style={{ marginTop: "20px" }}>
         <label>
-          <b>ID инвестиции</b>
-        </label>
+  <b>Инвестиция</b>
+</label>
 
-        <br />
+<br />
 
-        <input
-          type="number"
-          min="0"
-          step="1"
-          value={allocationInvestmentId}
-          onChange={(e) => setAllocationInvestmentId(e.target.value)}
-          style={{
-            width: "100%",
-            padding: "8px",
-            marginTop: "8px",
-            boxSizing: "border-box",
-          }}
-        />
+<select
+  value={allocationInvestmentId}
+  onChange={(e) => setAllocationInvestmentId(e.target.value)}
+  style={{
+    width: "100%",
+    padding: "8px",
+    marginTop: "8px",
+  }}
+>
+  {activeInvestments.length === 0 ? (
+    <option value="0">Нет доступных инвестиций</option>
+  ) : (
+    activeInvestments.map((investment) => (
+      <option key={investment.id} value={investment.id}>
+        ID {investment.id} — {investment.amount} USDT — доступно{" "}
+        {investment.remaining} USDT
+      </option>
+    ))
+  )}
+</select>
       </div>
 
       <div style={{ marginTop: "20px" }}>

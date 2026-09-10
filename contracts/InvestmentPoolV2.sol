@@ -132,7 +132,7 @@ uint256 public totalActiveDeposits;
 
     mapping(uint256 => uint256) public rewardRate;
     uint256 public earlyWithdrawFee = 1500; // 15%
-    uint256 public minimumInvestment = 100e18;
+    uint256 public minimumInvestment = 25e18;
 
     event Deposited(
         address indexed user,
@@ -207,12 +207,12 @@ event ProfitHarvested(
 
 require(reserveAddress != address(0), "Invalid reserve");
 reserveWallet = reserveAddress;
-        rewardRate[DAY] = 3;
-        rewardRate[WEEK] = 25;
-        rewardRate[MONTH] = 65;
-        rewardRate[THREE_MONTHS] = 250;
-        rewardRate[SIX_MONTHS] = 500;
-        rewardRate[YEAR] = 1000;
+        rewardRate[DAY] = 1;
+        rewardRate[WEEK] = 10;
+        rewardRate[MONTH] = 50;
+        rewardRate[THREE_MONTHS] = 150;
+        rewardRate[SIX_MONTHS] = 400;
+        rewardRate[YEAR] = 800;
     }    function deposit(
         uint256 amount,
         uint256 period
@@ -226,7 +226,7 @@ reserveWallet = reserveAddress;
         if (msg.sender != owner()) {
     require(
         amount >= minimumInvestment,
-        "Minimum investment is 100 USDT"
+        "Minimum investment is 25 USDT"
     );
         }
 
