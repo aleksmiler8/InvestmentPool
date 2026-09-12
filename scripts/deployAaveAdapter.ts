@@ -4,7 +4,7 @@ async function main() {
   const connection = await network.connect();
 
   const poolAddress =
-   "0x4Fa974C810910c952E53798bC034AA1dEB199739";
+   "0xaA1B6eb5Ade263A387B0F33e4d11Bbd1c2362215";
 
   const usdtAddress =
     "0x55d398326f99059fF775485246999027B3197955";
