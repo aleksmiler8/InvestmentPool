@@ -20,7 +20,7 @@
   "claim": "Claim",
 "earlyWithdraw": "Early Withdrawal",
   "actions": "Actions",
-  "enterAmount": "Minimum 100 USDT",
+  "enterAmount": "Minimum 25 USDT",
   "createInvestment": "Create investment",
   "successWithdraw": "Funds withdrawn successfully!",
   "successDeposit": "Investment created successfully!",

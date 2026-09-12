@@ -20,7 +20,7 @@
  "claim": "Kifizetés",
 "earlyWithdraw": "Korai kivonás", 
   "actions": "Műveletek",
-  "enterAmount": "Minimum 100 USDT",
+  "enterAmount": "Minimum 25 USDT",
   "createInvestment": "Befektetés létrehozása",
   "successWithdraw": "A pénzeszközök sikeresen kifizetve!",
   "successDeposit": "A befektetés sikeresen létrejött!",
