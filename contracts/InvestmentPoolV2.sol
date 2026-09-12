@@ -702,54 +702,87 @@ totalPendingRewards += reward;
             recovered += _withdrawPositionFull(inv.positions[i]);
         }
 
-        // Calculate the reward from the amount actually recovered.
-        // If the protocol earned less than the promised reward,
-        // pay only the real profit instead of reverting.
+        // Calculate the amount that was really recovered.
+        //
+        // IMPORTANT:
+        // The Pool NEVER covers a protocol shortfall.
+        // If the protocol returns less than the original investment,
+        // the user receives only what was actually recovered.
         uint256 available =
             recovered + unallocatedPrincipal;
 
         uint256 actualReward = 0;
 
+        // Profit exists only when the recovered amount is
+        // greater than the original investment amount.
         if (available > inv.amount) {
             actualReward =
                 available - inv.amount;
 
+            // Never pay more than the promised reward.
             if (actualReward > inv.reward) {
                 actualReward = inv.reward;
             }
         }
 
-        uint256 payout =
-            inv.amount + actualReward;
+        // If there is a protocol shortfall, pay only the real
+        // amount recovered. Do NOT take the difference from Pool.
+        uint256 payout;
 
-        require(
-            available >= payout,
-            "Insufficient investment liquidity"
-        );
+        if (available < inv.amount) {
+            payout = available;
+            actualReward = 0;
+        } else {
+            payout = inv.amount + actualReward;
+        }
 
         if (unallocatedPrincipal > 0) {
             protocolBalance[Protocol.Pool] -= unallocatedPrincipal;
         }
 
-        _finishInvestmentAccounting(investor, inv, payout, actualReward);
-        usdt.safeTransfer(msg.sender, payout);
+        _finishInvestmentAccounting(
+            investor,
+            inv,
+            payout,
+            actualReward
+        );
 
+        usdt.safeTransfer(
+            msg.sender,
+            payout
+        );
+
+        // Only real profit above the promised reward goes to Reserve.
         uint256 reserveProfit = 0;
 
         if (available > inv.amount + inv.reward) {
             reserveProfit =
                 available - inv.amount - inv.reward;
         }
+
         if (reserveProfit > 0) {
             require(
                 usdt.balanceOf(address(this)) >= reserveProfit,
                 "Insufficient reserve liquidity"
             );
-            usdt.safeTransfer(reserveWallet, reserveProfit);
-            emit ProfitHarvested(Protocol.Pool, reserveProfit);
+
+            usdt.safeTransfer(
+                reserveWallet,
+                reserveProfit
+            );
+
+            emit ProfitHarvested(
+                Protocol.Pool,
+                reserveProfit
+            );
         }
 
-        emit Withdrawn(msg.sender, investmentId, inv.amount, actualReward);
+        emit Withdrawn(
+            msg.sender,
+            investmentId,
+            payout,
+            actualReward
+        );
     }
 
 function earlyWithdraw(uint256 investmentId)
