@@ -4,13 +4,13 @@ async function main() {
   const connection = await network.connect();
 
   const poolAddress =
-    "0x8A89567a6863f8dd7cA2Cb235022c00cd95F40c0";
+     "0x4Fa974C810910c952E53798bC034AA1dEB199739";
 
   const aaveAdapter =
-    "0xa05aF259800e419B12Fa2fD8AEb8A12279f8F8C7";
+     "0x53e90c8Eab82C1c672019bF2D9214A567Aa197b7";
 
   const dforceAdapter =
-    "0x68a522913D769A62730292dB75F25fAc399023ed";
+    "0xCcd0E6a745870A05881872d777Cc39982F883c20";
 
   const pool =
     await connection.ethers.getContractAt(
