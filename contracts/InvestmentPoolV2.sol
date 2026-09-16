@@ -64,7 +64,8 @@ IProtocolAdapter public beefyAdapter;
 IProtocolAdapter public venusAdapter;
 IProtocolAdapter public pancakeAdapter;
 IProtocolAdapter public aaveAdapter;
-    IProtocolAdapter public dforceAdapter;
+ IProtocolAdapter public dforceAdapter;
+ IProtocolAdapter public uniswapV3Adapter;
 
 uint256 public totalDeposits;
 uint256 public totalInvestors;
@@ -90,7 +91,8 @@ uint256 public totalActiveDeposits;
     Venus,
     Pancake,
     Aave,
-    DForce
+    DForce,
+    UniswapV3
 }
 
     struct Position {
@@ -328,6 +330,8 @@ totalPendingRewards += reward;
         } else if (protocol == Protocol.DForce) {
             dforceAdapter =
                 IProtocolAdapter(adapter);
+        } else if (protocol == Protocol.UniswapV3) {
+    uniswapV3Adapter = IProtocolAdapter(adapter);
 
         } else {
             revert(
@@ -340,6 +344,7 @@ totalPendingRewards += reward;
         if (protocol == Protocol.DForce) return dforceAdapter;
         if (protocol == Protocol.Beefy) return beefyAdapter;
         if (protocol == Protocol.Pancake) return pancakeAdapter;
+        if (protocol == Protocol.UniswapV3) return uniswapV3Adapter;
         revert("Unsupported protocol");
     }
 
@@ -540,6 +545,20 @@ totalPendingRewards += reward;
             }
         }
 
+        if (protocol == Protocol.UniswapV3) {
+            if (address(uniswapV3Adapter) == address(0)) {
+                return 0;
+            }
+
+            try uniswapV3Adapter.totalAssets()
+                returns (uint256 assets)
+            {
+                return assets;
+            } catch {
+                return 0;
+            }
+        }
+
         return 0;
     }
 
@@ -573,6 +592,12 @@ totalPendingRewards += reward;
             uint256 request = available < amount ? available : amount;
             if (request == 0) return 0;
             try dforceAdapter.withdraw(request) returns (uint256) {} catch { return 0; }
+        } else if (protocol == Protocol.UniswapV3) {
+            if (address(uniswapV3Adapter) == address(0)) return 0;
+            uint256 available = _protocolAvailableAssets(Protocol.UniswapV3);
+            uint256 request = available < amount ? available : amount;
+            if (request == 0) return 0;
+            try uniswapV3Adapter.withdraw(request) returns (uint256) {} catch { return 0; }
         } else {
             return 0;
         }

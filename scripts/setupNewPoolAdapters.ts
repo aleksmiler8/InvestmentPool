@@ -12,6 +12,9 @@ async function main() {
   const dforceAdapter =
     "0x212fD8D805387A5a739d54e1b9B5424E281E74Ab";
 
+    const uniswapV3Adapter =
+  "0x306706Aff03A6e467E60535068562E8e7AeD3A2E";
+
   const pool =
     await connection.ethers.getContractAt(
       "InvestmentPoolV2",
@@ -22,6 +25,7 @@ async function main() {
   console.log("POOL:", poolAddress);
   console.log("AAVE:", aaveAdapter);
   console.log("DFORCE:", dforceAdapter);
+  console.log("UNISWAP V3:", uniswapV3Adapter);
 
   console.log();
   console.log("SETTING AAVE...");
@@ -51,6 +55,20 @@ async function main() {
 
   console.log("DFORCE CONFIRMED");
 
+    console.log();
+  console.log("SETTING UNISWAP V3...");
+
+  const txUniswap =
+    await pool.setProtocolAdapter(
+      7,
+      uniswapV3Adapter
+    );
+
+  console.log("UNISWAP V3 TX:", txUniswap.hash);
+  await txUniswap.wait();
+
+  console.log("UNISWAP V3 CONFIRMED");
+
   console.log();
   console.log("=== READ ONLY CHECK ===");
 
@@ -67,6 +85,11 @@ async function main() {
   console.log(
     "DFORCE ADAPTER:",
     await pool.dforceAdapter()
+  );
+
+    console.log(
+    "UNISWAP V3 ADAPTER:",
+    await pool.uniswapV3Adapter()
   );
 
   console.log();
