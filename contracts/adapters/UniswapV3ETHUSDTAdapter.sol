@@ -383,15 +383,12 @@ contract UniswapV3ETHUSDTAdapter is IProtocolAdapter {
         target - fromIdleUSDT;
 
     uint256 usdtBefore =
-        usdt.balanceOf(address(this));
+    usdt.balanceOf(address(this));
 
-    uint256 wethBefore =
-        IERC20(WETH).balanceOf(address(this));
-
-    /*
-     * If USDT idle balance is not enough, use idle WETH first.
-     */
-    if (remaining > 0 && idleWETH > 0) {
+/*
+ * If USDT idle balance is not enough, use idle WETH first.
+ */
+if (remaining > 0 && idleWETH > 0) {
         uint256 wethNeeded =
             remaining >= idleWETHValue
                 ? idleWETH
@@ -440,6 +437,9 @@ contract UniswapV3ETHUSDTAdapter is IProtocolAdapter {
             );
         }
     }
+    // Take WETH balance after converting idle WETH
+     uint256 wethBefore =
+        IERC20(WETH).balanceOf(address(this));
 
     /*
      * Recalculate remaining amount after using idle assets.
