@@ -13,7 +13,7 @@ async function main() {
     "0xc7A1C9435b42c0D6B962ef17F89B43d4E5245347";
 
     const uniswapV3Adapter =
-  "0x0355a10a6Cf2af3723cC36840cd884fdAfB5DA51";
+  "0xEC73a233A4Cd42Be59926E5a2A4c9E49B00Db8ed";
 
   const pool =
     await connection.ethers.getContractAt(

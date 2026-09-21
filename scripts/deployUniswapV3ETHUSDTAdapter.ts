@@ -27,7 +27,10 @@ async function main() {
     );
 
   const adapter =
-    await Adapter.deploy(POOL);
+  await Adapter.deploy(
+    POOL,
+    "0x0355a10a6Cf2af3723cC36840cd884fdAfB5DA51"
+  );
 
   await adapter.waitForDeployment();
 
@@ -52,6 +55,10 @@ async function main() {
     "USDT:",
     await adapter.usdt()
   );
+  console.log(
+  "MIGRATION SOURCE:",
+  await adapter.migrationSource()
+);
 
   console.log(
     "WETH:",

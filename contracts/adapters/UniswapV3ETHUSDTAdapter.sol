@@ -142,6 +142,11 @@ interface INonfungiblePositionManager {
     function increaseLiquidity(IncreaseLiquidityParams calldata params) external returns (uint128, uint256, uint256);
     function decreaseLiquidity(DecreaseLiquidityParams calldata params) external returns (uint256, uint256);
     function collect(CollectParams calldata params) external returns (uint256, uint256);
+    function transferFrom(
+    address from,
+    address to,
+    uint256 tokenId
+) external;
     function positions(uint256 tokenId) external view returns (
         uint96, address, address, address, uint24, int24, int24, uint128,
         uint256, uint256, uint128, uint128
@@ -150,6 +155,13 @@ interface INonfungiblePositionManager {
 
 interface IUniswapV3Pool {
     function slot0() external view returns (uint160, int24, uint16, uint16, uint16, uint8, bool);
+}
+interface IMigratableUniswapV3Adapter {
+    function acceptMigration(
+        uint256 tokenId,
+        int24 lower,
+        int24 upper
+    ) external;
 }
 
 contract UniswapV3ETHUSDTAdapter is IProtocolAdapter {
@@ -167,6 +179,7 @@ contract UniswapV3ETHUSDTAdapter is IProtocolAdapter {
 
     address public immutable pool;
     IERC20 public immutable usdt;
+    address public migrationSource;
     uint256 public positionTokenId;
     int24 public tickLower;
     int24 public tickUpper;
@@ -176,11 +189,64 @@ contract UniswapV3ETHUSDTAdapter is IProtocolAdapter {
         _;
     }
 
-    constructor(address poolAddress) {
-        require(poolAddress != address(0), "Invalid pool");
-        pool = poolAddress;
-        usdt = IERC20(USDT);
+    constructor(address poolAddress, address migrationSourceAddress) {
+    require(poolAddress != address(0), "Invalid pool");
+    require(migrationSourceAddress != address(0), "Invalid migration source");
+
+    pool = poolAddress;
+    usdt = IERC20(USDT);
+    migrationSource = migrationSourceAddress;
     }
+    function migrateTo(address newAdapter) external onlyPool {
+    require(newAdapter != address(0), "Invalid new adapter");
+    require(newAdapter != address(this), "Same adapter");
+    require(positionTokenId != 0, "No position");
+
+    uint256 tokenId = positionTokenId;
+
+    // РџРµСЂРµРґР°С‘Рј NFT РЅРѕРІРѕРјСѓ Р°РґР°РїС‚РµСЂСѓ
+    INonfungiblePositionManager(POSITION_MANAGER).transferFrom(
+        address(this),
+        newAdapter,
+        tokenId
+    );
+
+    // РџРµСЂРµРґР°С‘Рј РѕСЃС‚Р°РІС€РёРµСЃСЏ С‚РѕРєРµРЅС‹
+    uint256 usdtBalance = usdt.balanceOf(address(this));
+    if (usdtBalance > 0) {
+        usdt.safeTransfer(newAdapter, usdtBalance);
+    }
+
+    uint256 wethBalance = IERC20(WETH).balanceOf(address(this));
+    if (wethBalance > 0) {
+        IERC20(WETH).safeTransfer(newAdapter, wethBalance);
+    }
+
+    // РќРѕРІС‹Р№ Р°РґР°РїС‚РµСЂ С„РёРєСЃРёСЂСѓРµС‚ РїРѕР»СѓС‡РµРЅРЅС‹Р№ NFT
+    IMigratableUniswapV3Adapter(newAdapter).acceptMigration(
+        tokenId,
+        tickLower,
+        tickUpper
+    );
+
+    // РЎС‚Р°СЂС‹Р№ Р°РґР°РїС‚РµСЂ Р±РѕР»СЊС€Рµ РЅРµ СЃС‡РёС‚Р°РµС‚ РїРѕР·РёС†РёСЋ СЃРІРѕРµР№
+    positionTokenId = 0;
+    tickLower = 0;
+    tickUpper = 0;
+}
+    function acceptMigration(
+    uint256 tokenId,
+    int24 lower,
+    int24 upper
+) external {
+    require(msg.sender == migrationSource, "Only migration source");
+
+    positionTokenId = tokenId;
+    tickLower = lower;
+    tickUpper = upper;
+
+     migrationSource = address(0);
+}
 
     function _positionInfo() internal view returns (uint128 liquidity, int24 lower, int24 upper, uint128 owed0, uint128 owed1) {
         require(positionTokenId != 0, "No position");
@@ -211,6 +277,212 @@ contract UniswapV3ETHUSDTAdapter is IProtocolAdapter {
         uint256 intermediate = UniFullMath.mulDiv(wethAmount, uint256(sqrtP), uint256(1) << 96);
         return UniFullMath.mulDiv(intermediate, uint256(sqrtP), uint256(1) << 96);
     }
+        function _mulDivUp(
+        uint256 a,
+        uint256 b,
+        uint256 denominator
+    ) internal pure returns (uint256 result) {
+        require(denominator != 0, "Division by zero");
+
+        result = UniFullMath.mulDiv(a, b, denominator);
+
+        if (mulmod(a, b, denominator) != 0) {
+            require(result < type(uint256).max, "mulDiv overflow");
+            result++;
+        }
+    }
+
+    function _getAmountsForL(
+        uint128 l,
+        uint160 sqrtP,
+        int24 lower,
+        int24 upper
+    ) internal pure returns (
+        uint256 amount0,
+        uint256 amount1
+    ) {
+        if (l == 0) return (0, 0);
+
+        return _amountsForLiquidity(
+            sqrtP,
+            UniTickMath.getSqrtRatioAtTick(lower),
+            UniTickMath.getSqrtRatioAtTick(upper),
+            l
+        );
+    }
+
+    function _estimateLiquidityForTarget(
+    uint256 neededUSDT,
+    uint128 currentLiquidity,
+    uint160 sqrtP,
+    int24 lower,
+    int24 upper
+) internal pure returns (uint128) {
+    if (neededUSDT == 0 || currentLiquidity == 0) {
+        return 0;
+    }
+
+    (
+        uint256 fullAmount0,
+        uint256 fullAmount1
+    ) = _getAmountsForL(
+        currentLiquidity,
+        sqrtP,
+        lower,
+        upper
+    );
+
+    uint256 fullValue =
+        fullAmount1 +
+        _wethToUsdt(fullAmount0, sqrtP);
+
+    if (fullValue <= neededUSDT) {
+        return currentLiquidity;
+    }
+
+    uint256 estimatedL =
+        _mulDivUp(
+            neededUSDT,
+            uint256(currentLiquidity),
+            fullValue
+        );
+
+    if (estimatedL > currentLiquidity) {
+        return currentLiquidity;
+    }
+
+    return uint128(estimatedL);
+}
+
+    function _quoteWethToUsdt(
+        uint256 wethAmount
+    ) internal returns (uint256 amountOut) {
+        if (wethAmount == 0) return 0;
+
+        (
+            amountOut,
+            ,
+            ,
+
+        ) = IQuoterV2(QUOTER).quoteExactInputSingle(
+            IQuoterV2.QuoteExactInputSingleParams({
+                tokenIn: WETH,
+                tokenOut: USDT,
+                amountIn: wethAmount,
+                fee: POOL_FEE,
+                sqrtPriceLimitX96: 0
+            })
+        );
+    }
+
+    function _findLiquidityForTarget(
+        uint256 neededUSDT,
+        uint128 currentLiquidity,
+        uint160 sqrtP,
+        int24 lower,
+        int24 upper
+    ) internal returns (uint128 requiredLiquidity) {
+        if (neededUSDT == 0 || currentLiquidity == 0) {
+            return 0;
+        }
+
+        uint128 lLow = _estimateLiquidityForTarget(
+            neededUSDT,
+            currentLiquidity,
+            sqrtP,
+            lower,
+            upper
+        );
+
+        (
+            uint256 a0Low,
+            uint256 a1Low
+        ) = _getAmountsForL(
+            lLow,
+            sqrtP,
+            lower,
+            upper
+        );
+
+        uint256 yLow =
+            a1Low +
+            _quoteWethToUsdt(a0Low);
+
+        if (yLow >= neededUSDT) {
+            return lLow;
+        }
+
+        if (lLow == currentLiquidity) {
+            return currentLiquidity;
+        }
+
+        uint128 lHigh = currentLiquidity;
+
+        (
+            uint256 a0High,
+            uint256 a1High
+        ) = _getAmountsForL(
+            lHigh,
+            sqrtP,
+            lower,
+            upper
+        );
+
+        uint256 yHigh =
+            a1High +
+            _quoteWethToUsdt(a0High);
+
+        if (yHigh < neededUSDT) {
+            return currentLiquidity;
+        }
+
+        uint256 neededDelta =
+            neededUSDT - yLow;
+
+        uint256 lRange =
+            uint256(lHigh - lLow);
+
+        uint256 yRange =
+    yHigh - yLow;
+
+if (yRange == 0) {
+    return lHigh;
+}
+
+        uint256 lDelta =
+            _mulDivUp(
+                neededDelta,
+                lRange,
+                yRange
+            );
+
+        uint128 lCandidate =
+            lLow + uint128(lDelta);
+
+        if (lCandidate > lHigh) {
+            lCandidate = lHigh;
+        }
+
+        (
+            uint256 a0Cand,
+            uint256 a1Cand
+        ) = _getAmountsForL(
+            lCandidate,
+            sqrtP,
+            lower,
+            upper
+        );
+
+        uint256 yCand =
+            a1Cand +
+            _quoteWethToUsdt(a0Cand);
+
+        if (yCand >= neededUSDT) {
+            return lCandidate;
+        }
+
+        return lHigh;
+    }
 
     function _positionValueUSDT() internal view returns (uint256 value) {
         if (positionTokenId == 0) return 0;
@@ -230,6 +502,7 @@ contract UniswapV3ETHUSDTAdapter is IProtocolAdapter {
         amount1 += owed1;
         value = amount1 + _wethToUsdt(amount0, sqrtP);
     }
+
 
     function deposit(uint256 amount) external override onlyPool {
         require(amount > 0, "Invalid amount");
@@ -275,18 +548,18 @@ contract UniswapV3ETHUSDTAdapter is IProtocolAdapter {
             (uint256 tokenId, , , ) = INonfungiblePositionManager(POSITION_MANAGER).mint(
                 INonfungiblePositionManager.MintParams({
                     token0: WETH,
-                    token1: USDT,
-                    fee: POOL_FEE,
-                    tickLower: tickLower,
-                    tickUpper: tickUpper,
-                    amount0Desired: wethBalance,
-                    amount1Desired: usdtBalance,
-                    amount0Min: 0,
-                    amount1Min: 0,
-                    recipient: address(this),
-                    deadline: block.timestamp
-                })
-            );
+        token1: USDT,
+        fee: POOL_FEE,
+        tickLower: tickLower,
+        tickUpper: tickUpper,
+        amount0Desired: wethBalance,
+        amount1Desired: usdtBalance,
+        amount0Min: 0,
+         amount1Min: 0,
+        recipient: address(this),
+        deadline: block.timestamp
+    })
+);
             positionTokenId = tokenId;
         } else {
             INonfungiblePositionManager(POSITION_MANAGER).increaseLiquidity(
@@ -313,12 +586,17 @@ contract UniswapV3ETHUSDTAdapter is IProtocolAdapter {
     require(amount > 0, "Invalid amount");
 
     /*
-     * IMPORTANT:
      * This adapter is a shared vault around one Uniswap V3 NFT.
      *
-     * First collect already-earned fees into the adapter.
-     * They remain part of the shared assets and are NOT automatically
-     * assigned to the caller.
+     * The InvestmentPool owns shares of the aggregate adapter assets.
+     * Therefore we must release only enough assets for this withdrawal.
+     */
+
+    /*
+     * 1. Collect currently owed fees.
+     *
+     * Collected fees become idle adapter assets and therefore
+     * remain part of the shared adapter value.
      */
     if (positionTokenId != 0) {
         INonfungiblePositionManager(POSITION_MANAGER).collect(
@@ -331,9 +609,9 @@ contract UniswapV3ETHUSDTAdapter is IProtocolAdapter {
         );
     }
 
-    uint256 idleUSDT = usdt.balanceOf(address(this));
-    uint256 idleWETH = IERC20(WETH).balanceOf(address(this));
-
+    /*
+     * 2. Read current price.
+     */
     (
         uint160 sqrtP,
         ,
@@ -344,27 +622,42 @@ contract UniswapV3ETHUSDTAdapter is IProtocolAdapter {
 
     ) = IUniswapV3Pool(UNISWAP_V3_POOL).slot0();
 
+    /*
+     * 3. Read idle balances.
+     */
+    uint256 idleUSDT =
+        usdt.balanceOf(address(this));
+
+    uint256 idleWETH =
+        IERC20(WETH).balanceOf(address(this));
+
+    /*
+     * 4. Convert idle WETH to its approximate USDT value.
+     */
     uint256 idleWETHValue =
         _wethToUsdt(idleWETH, sqrtP);
 
+    /*
+     * 5. Calculate current value of the active V3 position.
+     */
     uint256 positionValue =
         _positionValueUSDT();
 
     /*
-     * _positionValueUSDT() includes only the active LP liquidity
-     * and any fees that are still owed by the NFT.
-     *
-     * Fees already collected above are now idle assets.
+     * Total assets controlled by this adapter.
      */
     uint256 totalValue =
         idleUSDT +
         idleWETHValue +
         positionValue;
 
-    require(totalValue > 0, "No position value");
+    require(
+        totalValue > 0,
+        "No adapter assets"
+    );
 
     /*
-     * Never promise more than the adapter actually owns.
+     * The adapter must never return more than it actually owns.
      */
     uint256 target =
         amount < totalValue
@@ -372,239 +665,247 @@ contract UniswapV3ETHUSDTAdapter is IProtocolAdapter {
             : totalValue;
 
     /*
-     * Use existing idle USDT first.
+     * 6. Use idle USDT first.
      */
-    uint256 fromIdleUSDT =
-        idleUSDT < target
-            ? idleUSDT
-            : target;
-
     uint256 remaining =
-        target - fromIdleUSDT;
+        target > idleUSDT
+            ? target - idleUSDT
+            : 0;
 
-    uint256 usdtBefore =
-    usdt.balanceOf(address(this));
+    /*
+     * If idle USDT is already enough, no LP liquidity needs
+     * to be removed.
+     */
+    if (remaining > 0) {
 
-/*
- * If USDT idle balance is not enough, use idle WETH first.
- */
-if (remaining > 0 && idleWETH > 0) {
-        uint256 wethNeeded =
-            remaining >= idleWETHValue
-                ? idleWETH
-                : UniFullMath.mulDiv(
-                    remaining,
-                    uint256(1) << 96,
-                    uint256(sqrtP)
-                );
+        /*
+         * 7. Use idle WETH next.
+         *
+         * Calculate the amount of WETH required from the current
+         * spot price. The actual swap is protected by the quoter
+         * and 0.50% slippage limit.
+         */
+        if (idleWETH > 0) {
+    uint256 wethNeeded;
+
+    if (remaining >= idleWETHValue) {
+        wethNeeded = idleWETH;
+    } else {
+        uint256 intermediate =
+            _mulDivUp(
+                remaining,
+                uint256(1) << 96,
+                uint256(sqrtP)
+            );
+
+        wethNeeded =
+            _mulDivUp(
+                intermediate,
+                uint256(1) << 96,
+                uint256(sqrtP)
+            );
 
         if (wethNeeded > idleWETH) {
             wethNeeded = idleWETH;
         }
-
-        if (wethNeeded > 0) {
-            (
-                uint256 quoted,
-                ,
-                ,
-
-            ) = IQuoterV2(QUOTER).quoteExactInputSingle(
-                IQuoterV2.QuoteExactInputSingleParams({
-                    tokenIn: WETH,
-                    tokenOut: USDT,
-                    amountIn: wethNeeded,
-                    fee: POOL_FEE,
-                    sqrtPriceLimitX96: 0
-                })
-            );
-
-            IERC20(WETH).forceApprove(
-                SWAP_ROUTER,
-                wethNeeded
-            );
-
-            ISwapRouter02(SWAP_ROUTER).exactInputSingle(
-                ISwapRouter02.ExactInputSingleParams({
-                    tokenIn: WETH,
-                    tokenOut: USDT,
-                    fee: POOL_FEE,
-                    recipient: address(this),
-                    amountIn: wethNeeded,
-                    amountOutMinimum:
-                        (quoted * (BPS - SWAP_SLIPPAGE_BPS)) / BPS,
-                    sqrtPriceLimitX96: 0
-                })
-            );
-        }
     }
-    // Take WETH balance after converting idle WETH
-     uint256 wethBefore =
-        IERC20(WETH).balanceOf(address(this));
 
-    /*
-     * Recalculate remaining amount after using idle assets.
-     */
-    uint256 currentUSDT =
-        usdt.balanceOf(address(this));
+    if (wethNeeded > 0) {
+    uint256 quoted = _quoteWethToUsdt(wethNeeded);
+    require(quoted > 0, "Zero WETH quote");
 
-    uint256 recoveredIdle =
-        currentUSDT - usdtBefore;
+    IERC20(WETH).forceApprove(SWAP_ROUTER, wethNeeded);
 
-    /*
-     * The USDT that existed before this withdrawal is also available.
-     */
-    uint256 idleAvailable =
-        idleUSDT + recoveredIdle;
+    uint256 minOut = (quoted * (BPS - SWAP_SLIPPAGE_BPS)) / BPS;
 
-    if (idleAvailable >= target) {
-        returned = target;
-    } else {
-        /*
-         * We still need liquidity from the LP position.
-         */
-        uint256 needFromLP =
-            target - idleAvailable;
-
-        require(
-            positionTokenId != 0,
-            "No position"
-        );
-
-        (
-            uint128 liquidity,
-            ,
-            ,
-            ,
-
-        ) = _positionInfo();
-
-        require(
-            liquidity > 0,
-            "No liquidity"
-        );
-
-        require(
-            positionValue > 0,
-            "No LP value"
-        );
+    ISwapRouter02(SWAP_ROUTER).exactInputSingle(
+        ISwapRouter02.ExactInputSingleParams({
+            tokenIn: WETH,
+            tokenOut: USDT,
+            fee: POOL_FEE,
+            recipient: address(this),
+            amountIn: wethNeeded,
+            amountOutMinimum: minOut, // РСЃРїСЂР°РІР»РµРЅРѕ: РґРѕР±Р°РІР»РµРЅР° Р·Р°С‰РёС‚Р° 0.5%
+            sqrtPriceLimitX96: 0
+        })
+    );
+}
 
         /*
-         * Remove ONLY the LP value actually required.
-         *
-         * No artificial 1% buffer.
+         * Refresh USDT after using idle WETH.
          */
-        uint256 liquidityToRemove =
-            UniFullMath.mulDiv(
-                uint256(liquidity),
-                needFromLP,
-                positionValue
-            );
-
-        if (liquidityToRemove == 0) {
-            liquidityToRemove = 1;
-        }
-
-        if (liquidityToRemove > liquidity) {
-            liquidityToRemove = liquidity;
-        }
-
-        INonfungiblePositionManager(
-            POSITION_MANAGER
-        ).decreaseLiquidity(
-            INonfungiblePositionManager
-                .DecreaseLiquidityParams({
-                    tokenId: positionTokenId,
-                    liquidity: uint128(liquidityToRemove),
-                    amount0Min: 0,
-                    amount1Min: 0,
-                    deadline: block.timestamp
-                })
-        );
-
-        /*
-         * Collect only after decreasing liquidity.
-         *
-         * Any fees belonging to the still-existing NFT remain
-         * in the shared adapter after this withdrawal.
-         */
-        INonfungiblePositionManager(
-            POSITION_MANAGER
-        ).collect(
-            INonfungiblePositionManager
-                .CollectParams({
-                    tokenId: positionTokenId,
-                    recipient: address(this),
-                    amount0Max: type(uint128).max,
-                    amount1Max: type(uint128).max
-                })
-        );
-
-        if (liquidityToRemove == liquidity) {
-            positionTokenId = 0;
-            tickLower = 0;
-            tickUpper = 0;
-        }
-
-        /*
-         * Convert WETH recovered from the LP into USDT.
-         */
-        uint256 wethAfter =
-            IERC20(WETH).balanceOf(address(this));
-
-        uint256 wethDelta =
-            wethAfter > wethBefore
-                ? wethAfter - wethBefore
-                : 0;
-
-        if (wethDelta > 0) {
-            (
-                uint256 quoted,
-                ,
-                ,
-
-            ) = IQuoterV2(QUOTER).quoteExactInputSingle(
-                IQuoterV2.QuoteExactInputSingleParams({
-                    tokenIn: WETH,
-                    tokenOut: USDT,
-                    amountIn: wethDelta,
-                    fee: POOL_FEE,
-                    sqrtPriceLimitX96: 0
-                })
-            );
-
-            IERC20(WETH).forceApprove(
-                SWAP_ROUTER,
-                wethDelta
-            );
-
-            ISwapRouter02(SWAP_ROUTER).exactInputSingle(
-                ISwapRouter02.ExactInputSingleParams({
-                    tokenIn: WETH,
-                    tokenOut: USDT,
-                    fee: POOL_FEE,
-                    recipient: address(this),
-                    amountIn: wethDelta,
-                    amountOutMinimum:
-                        (quoted * (BPS - SWAP_SLIPPAGE_BPS)) / BPS,
-                    sqrtPriceLimitX96: 0
-                })
-            );
-        }
-
-        uint256 finalUSDT =
+        uint256 currentUSDT =
             usdt.balanceOf(address(this));
 
         /*
-         * The adapter may return only what it really recovered.
-         * It NEVER creates USDT to cover a shortfall.
+         * 8. If USDT is still insufficient, release only part
+         * of the active V3 liquidity.
          */
-        require(
-            finalUSDT >= target,
-            "Insufficient recovered USDT"
-        );
+        if (currentUSDT < target) {
 
-        returned = target;
-    }
+            require(
+                positionTokenId != 0,
+                "No position"
+            );
+
+            (
+                uint128 liquidity,
+                int24 lower,
+                int24 upper,
+                ,
+
+            ) = _positionInfo();
+
+            require(
+                liquidity > 0,
+                "No liquidity"
+            );
+
+            /*
+             * Determine how much USDT is still required.
+             */
+            uint256 neededUSDT =
+                target - currentUSDT;
+
+            /*
+             * Get current pool price again.
+             */
+            (
+                uint160 currentSqrtP,
+                ,
+                ,
+                ,
+                ,
+                ,
+
+            ) = IUniswapV3Pool(UNISWAP_V3_POOL).slot0();
+
+                        require(
+                currentSqrtP > 0,
+                "Invalid pool price"
+            );
+
+            /*
+             * Estimate the amount of liquidity required.
+             *
+             * We intentionally calculate from the actual token
+             * amounts of the current V3 position rather than from
+             * an arbitrary fixed percentage.
+             */
+            uint128 liquidityToRemove =
+    _findLiquidityForTarget(
+        neededUSDT,
+        liquidity,
+        currentSqrtP,
+        lower,
+        upper
+    );
+
+require(
+    liquidityToRemove > 0,
+    "No liquidity to remove"
+);
+
+            /*
+             * Remember WETH balance BEFORE removing liquidity.
+             *
+             * Only the WETH delta generated by this operation
+             * will be swapped below.
+             */
+            uint256 wethBefore =
+                IERC20(WETH).balanceOf(address(this));
+
+            /*
+             * 9. Remove ONLY the required amount of liquidity.
+             */
+            INonfungiblePositionManager(
+                POSITION_MANAGER
+            ).decreaseLiquidity(
+                INonfungiblePositionManager
+                    .DecreaseLiquidityParams({
+                        tokenId: positionTokenId,
+                        liquidity: uint128(liquidityToRemove),
+                        amount0Min: 0,
+                        amount1Min: 0,
+                        deadline: block.timestamp
+                    })
+            );
+
+            /*
+             * 10. Collect the tokens released by the decrease.
+             */
+            INonfungiblePositionManager(
+                POSITION_MANAGER
+            ).collect(
+                INonfungiblePositionManager
+                    .CollectParams({
+                        tokenId: positionTokenId,
+                        recipient: address(this),
+                        amount0Max: type(uint128).max,
+                        amount1Max: type(uint128).max
+                    })
+            );
+
+            /*
+             * If all liquidity was removed, the NFT no longer
+             * represents an active LP position.
+             */
+            if (liquidityToRemove == liquidity) {
+                positionTokenId = 0;
+                tickLower = 0;
+                tickUpper = 0;
+            }
+
+            /*
+             * 11. Convert only NEWLY RECEIVED WETH to USDT.
+             */
+            uint256 wethAfter =
+                IERC20(WETH).balanceOf(address(this));
+
+            uint256 recoveredWETH =
+                wethAfter > wethBefore
+                    ? wethAfter - wethBefore
+                    : 0;
+
+                        if (recoveredWETH > 0) {
+    uint256 quoted = _quoteWethToUsdt(recoveredWETH);
+    require(quoted > 0, "Zero WETH quote");
+
+    IERC20(WETH).forceApprove(SWAP_ROUTER, recoveredWETH);
+
+    uint256 minOut = (quoted * (BPS - SWAP_SLIPPAGE_BPS)) / BPS;
+
+    ISwapRouter02(SWAP_ROUTER).exactInputSingle(
+        ISwapRouter02.ExactInputSingleParams({
+            tokenIn: WETH,
+            tokenOut: USDT,
+            fee: POOL_FEE,
+            recipient: address(this),
+            amountIn: recoveredWETH,
+            amountOutMinimum: minOut, // РСЃРїСЂР°РІР»РµРЅРѕ: РґРѕР±Р°РІР»РµРЅР° Р·Р°С‰РёС‚Р° 0.5%
+            sqrtPriceLimitX96: 0
+        })
+    );
+}
+
+        /*
+     * 12. Check the final amount actually available.
+     */
+    uint256 finalUSDT =
+        usdt.balanceOf(address(this));
+
+    require(
+        finalUSDT >= target,
+        "Insufficient recovered USDT"
+    );
+
+    /*
+     * Return exactly the amount requested by InvestmentPool.
+     *
+     * Any remaining adapter assets stay in the shared adapter
+     * and continue backing the other investments.
+     */
+    returned = target;
 
     require(
         returned > 0,
@@ -615,6 +916,9 @@ if (remaining > 0 && idleWETH > 0) {
         msg.sender,
         returned
     );
+}
+}
+}
 }
 
     function totalAssets() external view override returns (uint256) {
