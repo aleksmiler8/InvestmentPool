@@ -54,11 +54,6 @@ export default function LiquidityPanel({
     name: "DForce",
     status: "connected",
   },
-  {
-    id: "uniswap",
-    name: "Uniswap V3",
-    status: "connected",
-  },
 ];
     const [showAllocateModal, setShowAllocateModal] = useState(false);
 const [showTransferModal, setShowTransferModal] = useState(false);
@@ -88,7 +83,6 @@ const [protocolBalances, setProtocolBalances] = useState({
   Pancake: "0",
   Aave: "0",
    DForce: "0",
-   "Uniswap V3": "0",
 });
 
 const [protocolApy, setProtocolApy] = useState({
@@ -184,7 +178,6 @@ const venus = await contract.protocolBalance(3);
 const pancake = await contract.protocolBalance(4);
 const aave = await contract.protocolBalance(5);
 const dforce = await contract.protocolBalance(6);
-const uniswapV3 = await contract.protocolBalance(7);
 
     setProtocolBalances({
       Pool: ethers.formatUnits(pool, 18),
@@ -194,7 +187,6 @@ const uniswapV3 = await contract.protocolBalance(7);
       Pancake: ethers.formatUnits(pancake, 18),
       Aave: ethers.formatUnits(aave, 18),
         DForce: ethers.formatUnits(dforce, 18),
-        "Uniswap V3": ethers.formatUnits(uniswapV3, 18),
     });
   } catch (e) {
     console.error("Failed to load liquidity:", e);
@@ -352,7 +344,6 @@ const allocateFunds = async () => {
       Pancake: 4,
       Aave: 5,
       DForce: 6,
-      "Uniswap V3": 7,
     };
 
     const tx = await contract.investIntoProtocol(
@@ -390,7 +381,6 @@ const transferFunds = async () => {
   Pancake: 4,
     Aave: 5,
   DForce: 6,
-   "Uniswap V3": 7,
 };
 
     const tx = await contract.transferBetweenProtocols(
@@ -426,7 +416,6 @@ const returnToPool = async () => {
       Pancake: 4,
         Aave: 5,
          DForce: 6,
-          "Uniswap V3": 7,
     };
 
     const tx = await contract.returnToPool(
@@ -461,7 +450,6 @@ const setProtocolBalance = async () => {
       Pancake: 4,
         Aave: 5,
          DForce: 6,
-          "Uniswap V3": 7,
     };
 
     const tx = await contract.setProtocolBalance(
@@ -725,7 +713,6 @@ const harvestProfit = async () => {
           <option>Pancake</option>
           <option>Aave</option>
           <option>DForce</option>
-          <option>Uniswap V3</option>
         </select>
       </div>
 
@@ -818,7 +805,6 @@ const harvestProfit = async () => {
           <option>Pancake</option>
           <option>Aave</option>
           <option>DForce</option>
-          <option>Uniswap V3</option>
         </select>
       </div>
 
@@ -841,7 +827,6 @@ const harvestProfit = async () => {
           <option>Pancake</option>
           <option>Aave</option>
           <option>DForce</option>
-          <option>Uniswap V3</option>
         </select>
       </div>
 
@@ -1002,7 +987,6 @@ const harvestProfit = async () => {
           <option>Pancake</option>
           <option>Aave</option>
           <option>DForce</option>
-          <option>Uniswap V3</option>
         </select>
       </div>
 

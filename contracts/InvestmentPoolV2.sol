@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/Pausable.sol";
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
+import "./ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
@@ -41,7 +42,12 @@ interface IVToken {
         view
         returns (uint256);
 }
-contract InvestmentPoolV2 is Ownable, Pausable, ReentrancyGuard {
+contract InvestmentPoolV2 is
+    Initializable,
+    OwnableUpgradeable,
+    PausableUpgradeable,
+    ReentrancyGuardUpgradeable
+{
     /*
      * Merged candidate:
      * current InvestmentPoolV2 + proven Venus withdrawal mechanics
@@ -49,7 +55,7 @@ contract InvestmentPoolV2 is Ownable, Pausable, ReentrancyGuard {
      */
     using SafeERC20 for IERC20;
 
-IERC20 public immutable usdt;
+IERC20 public usdt;
     
     address public constant VUSDT =
     0xfD5840Cd36d94D7229439859C0112a4185BC0255;
@@ -65,7 +71,6 @@ IProtocolAdapter public venusAdapter;
 IProtocolAdapter public pancakeAdapter;
 IProtocolAdapter public aaveAdapter;
  IProtocolAdapter public dforceAdapter;
- IProtocolAdapter public uniswapV3Adapter;
 
 uint256 public totalDeposits;
 uint256 public totalInvestors;
@@ -91,8 +96,7 @@ uint256 public totalActiveDeposits;
     Venus,
     Pancake,
     Aave,
-    DForce,
-    UniswapV3
+    DForce
 }
 
     struct Position {
@@ -133,8 +137,8 @@ uint256 public totalActiveDeposits;
     PendingReserveFee[] public pendingReserveFees;
 
     mapping(uint256 => uint256) public rewardRate;
-    uint256 public earlyWithdrawFee = 1500; // 15%
-    uint256 public minimumInvestment = 25e18;
+    uint256 public earlyWithdrawFee; // 15%
+    uint256 public minimumInvestment;
 
     event Deposited(
         address indexed user,
@@ -197,24 +201,39 @@ event ProfitHarvested(
         _;
     }
 
-    constructor(
-    address usdtAddress,
-    address reserveAddress
-)
-    Ownable(msg.sender)
-{
-        require(usdtAddress != address(0), "Invalid USDT");
+    function initialize(
+        address usdtAddress,
+        address reserveAddress
+    )
+        external
+        initializer
+    {
+        require(
+            usdtAddress != address(0),
+            "Invalid USDT"
+        );
+
+        require(
+            reserveAddress != address(0),
+            "Invalid reserve"
+        );
+
+        __Ownable_init(msg.sender);
+        __Pausable_init();
+        __ReentrancyGuard_init();
 
         usdt = IERC20(usdtAddress);
+        reserveWallet = reserveAddress;
 
-require(reserveAddress != address(0), "Invalid reserve");
-reserveWallet = reserveAddress;
         rewardRate[DAY] = 1;
         rewardRate[WEEK] = 10;
         rewardRate[MONTH] = 50;
         rewardRate[THREE_MONTHS] = 150;
         rewardRate[SIX_MONTHS] = 400;
         rewardRate[YEAR] = 800;
+
+        earlyWithdrawFee = 1500;
+        minimumInvestment = 25e18;
     }    function deposit(
         uint256 amount,
         uint256 period
@@ -330,8 +349,6 @@ totalPendingRewards += reward;
         } else if (protocol == Protocol.DForce) {
             dforceAdapter =
                 IProtocolAdapter(adapter);
-        } else if (protocol == Protocol.UniswapV3) {
-    uniswapV3Adapter = IProtocolAdapter(adapter);
 
         } else {
             revert(
@@ -344,8 +361,6 @@ totalPendingRewards += reward;
         if (protocol == Protocol.DForce) return dforceAdapter;
         if (protocol == Protocol.Beefy) return beefyAdapter;
         if (protocol == Protocol.Pancake) return pancakeAdapter;
-        if (protocol == Protocol.UniswapV3) return uniswapV3Adapter;
-        revert("Unsupported protocol");
     }
 
     function _protocolAssets(Protocol protocol) internal view returns (uint256) {
@@ -544,21 +559,6 @@ totalPendingRewards += reward;
                 return 0;
             }
         }
-
-        if (protocol == Protocol.UniswapV3) {
-            if (address(uniswapV3Adapter) == address(0)) {
-                return 0;
-            }
-
-            try uniswapV3Adapter.totalAssets()
-                returns (uint256 assets)
-            {
-                return assets;
-            } catch {
-                return 0;
-            }
-        }
-
         return 0;
     }
 
@@ -592,12 +592,6 @@ totalPendingRewards += reward;
             uint256 request = available < amount ? available : amount;
             if (request == 0) return 0;
             try dforceAdapter.withdraw(request) returns (uint256) {} catch { return 0; }
-        } else if (protocol == Protocol.UniswapV3) {
-            if (address(uniswapV3Adapter) == address(0)) return 0;
-            uint256 available = _protocolAvailableAssets(Protocol.UniswapV3);
-            uint256 request = available < amount ? available : amount;
-            if (request == 0) return 0;
-            try uniswapV3Adapter.withdraw(request) returns (uint256) {} catch { return 0; }
         } else {
             return 0;
         }
@@ -1186,4 +1180,10 @@ function getInvestor(address user)
         investor.investments.length
     );
 }
+
+    /*
+     * Reserved storage for future upgrades.
+     * Do not insert variables into the existing storage layout.
+     */
+    uint256[50] private __gap;
 }

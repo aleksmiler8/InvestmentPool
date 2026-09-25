@@ -4,16 +4,13 @@ async function main() {
   const connection = await network.connect();
 
   const poolAddress =
-     "0x53fC4c8F3901aD94351b4fe8Ce93335C38f438F1";
+  "0x19e4b9fD1B824FfF343D87eE8625b5032468EB07";
 
-  const aaveAdapter =
-     "0xe1b5288f52b5Ee0fF645671C811FA03a50B5CC90";
+const aaveAdapter =
+  "0x85b4a66E039E7d182D5A7206E436341B5e1966a9";
 
-  const dforceAdapter =
-    "0xc7A1C9435b42c0D6B962ef17F89B43d4E5245347";
-
-    const uniswapV3Adapter =
-  "0xEC73a233A4Cd42Be59926E5a2A4c9E49B00Db8ed";
+const dforceAdapter =
+  "0xa18E0e1dc54E86F9164c8b149a2587Ea7508deAa";
 
   const pool =
     await connection.ethers.getContractAt(
@@ -25,7 +22,6 @@ async function main() {
   console.log("POOL:", poolAddress);
   console.log("AAVE:", aaveAdapter);
   console.log("DFORCE:", dforceAdapter);
-  console.log("UNISWAP V3:", uniswapV3Adapter);
 
   console.log();
   console.log("SETTING AAVE...");
@@ -55,19 +51,6 @@ async function main() {
 
   console.log("DFORCE CONFIRMED");
 
-    console.log();
-  console.log("SETTING UNISWAP V3...");
-
-  const txUniswap =
-    await pool.setProtocolAdapter(
-      7,
-      uniswapV3Adapter
-    );
-
-  console.log("UNISWAP V3 TX:", txUniswap.hash);
-  await txUniswap.wait();
-
-  console.log("UNISWAP V3 CONFIRMED");
 
   console.log();
   console.log("=== READ ONLY CHECK ===");
@@ -85,11 +68,6 @@ async function main() {
   console.log(
     "DFORCE ADAPTER:",
     await pool.dforceAdapter()
-  );
-
-    console.log(
-    "UNISWAP V3 ADAPTER:",
-    await pool.uniswapV3Adapter()
   );
 
   console.log();

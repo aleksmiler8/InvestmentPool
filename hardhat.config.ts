@@ -2,13 +2,15 @@ import "dotenv/config";
 
 import hardhatEthers from "@nomicfoundation/hardhat-ethers";
 import hardhatToolboxViemPlugin from "@nomicfoundation/hardhat-toolbox-viem";
+import hardhatUpgrades from "@openzeppelin/hardhat-upgrades";
 import { configVariable, defineConfig } from "hardhat/config";
 
 export default defineConfig({
   plugins: [
-    hardhatEthers,
-    hardhatToolboxViemPlugin,
-  ],
+  hardhatEthers,
+  hardhatToolboxViemPlugin,
+  hardhatUpgrades,
+],
 
   solidity: {
     profiles: {
@@ -36,9 +38,9 @@ export default defineConfig({
 
   networks: {
     hardhatMainnet: {
-      type: "edr-simulated",
-      chainType: "l1",
-    },
+  type: "edr-simulated",
+  chainType: "l1",
+},
 
     hardhatOp: {
       type: "edr-simulated",
