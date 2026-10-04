@@ -25,7 +25,8 @@ export default function InvestmentList({
   return (
     <>
       {investments.map((item, index) => {
-  const inv = item.investment;
+        const inv = item.investment;
+        const assetName = item.asset === 1 ? "USDC" : "USDT";
         const amount = ethers.formatUnits(inv[0], 18);
         const startTime = Number(inv[1]);
         const endTime = Number(inv[2]);
@@ -61,10 +62,9 @@ const isToday =
             <h3 className="investment-title">
               💰 {t("investment")} #{index + 1}
             </h3>
+            <p><b>{t("amount")}:</b> {amount} {assetName}</p>
 
-            <p><b>{t("amount")}:</b> {amount} USDT</p>
-
-            <p><b>{t("profit")}:</b> {reward} USDT</p>
+            <p><b>{t("profit")}:</b> {reward} {assetName}</p>
 
             <p>
               <b>{t("finish")}:</b>{" "}

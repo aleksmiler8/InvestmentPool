@@ -188,6 +188,7 @@ setOccupiedPeriods(occupied);
   investmentCount={investmentCount}
   totalDeposit={totalDeposit}
   totalReward={totalReward}
+  selectedAsset={selectedAsset}
   t={t}
 />
 <div style={{ display: "flex", gap: "8px", marginBottom: "15px" }}>
