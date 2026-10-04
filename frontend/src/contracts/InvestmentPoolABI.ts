@@ -455,6 +455,29 @@ export const InvestmentPoolABI = [
     "stateMutability": "nonpayable",
     "type": "function"
   },
+    {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "period",
+        "type": "uint256"
+      },
+      {
+        "internalType": "enum InvestmentPoolV2.Asset",
+        "name": "asset",
+        "type": "uint8"
+      }
+    ],
+    "name": "depositAsset",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
   {
     "inputs": [],
     "name": "dforceAdapter",
@@ -543,6 +566,30 @@ export const InvestmentPoolABI = [
         "internalType": "bool",
         "name": "finished",
         "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+    {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "investmentId",
+        "type": "uint256"
+      }
+    ],
+    "name": "getInvestmentAsset",
+    "outputs": [
+      {
+        "internalType": "enum InvestmentPoolV2.Asset",
+        "name": "",
+        "type": "uint8"
       }
     ],
     "stateMutability": "view",
@@ -842,6 +889,30 @@ export const InvestmentPoolABI = [
     "stateMutability": "view",
     "type": "function"
   },
+    {
+    "inputs": [
+      {
+        "internalType": "enum InvestmentPoolV2.Asset",
+        "name": "",
+        "type": "uint8"
+      },
+      {
+        "internalType": "enum InvestmentPoolV2.Protocol",
+        "name": "",
+        "type": "uint8"
+      }
+    ],
+    "name": "protocolBalanceByAsset",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
   {
     "inputs": [],
     "name": "renounceOwnership",
@@ -925,6 +996,29 @@ export const InvestmentPoolABI = [
     "stateMutability": "nonpayable",
     "type": "function"
   },
+    {
+    "inputs": [
+      {
+        "internalType": "enum InvestmentPoolV2.Asset",
+        "name": "asset",
+        "type": "uint8"
+      },
+      {
+        "internalType": "enum InvestmentPoolV2.Protocol",
+        "name": "protocol",
+        "type": "uint8"
+      },
+      {
+        "internalType": "address",
+        "name": "adapter",
+        "type": "address"
+      }
+    ],
+    "name": "setAssetAdapter",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
   {
     "inputs": [
       {
@@ -939,6 +1033,19 @@ export const InvestmentPoolABI = [
       }
     ],
     "name": "setRewardRate",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+    {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "token",
+        "type": "address"
+      }
+    ],
+    "name": "setUSDC",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -972,6 +1079,44 @@ export const InvestmentPoolABI = [
   {
     "inputs": [],
     "name": "totalDeposits",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+    {
+    "inputs": [
+      {
+        "internalType": "enum InvestmentPoolV2.Asset",
+        "name": "",
+        "type": "uint8"
+      }
+    ],
+    "name": "totalDepositsByAsset",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+    {
+    "inputs": [
+      {
+        "internalType": "enum InvestmentPoolV2.Asset",
+        "name": "",
+        "type": "uint8"
+      }
+    ],
+    "name": "totalActiveDepositsByAsset",
     "outputs": [
       {
         "internalType": "uint256",
@@ -1027,6 +1172,30 @@ export const InvestmentPoolABI = [
     "stateMutability": "view",
     "type": "function"
   },
+    {
+    "inputs": [
+      {
+        "internalType": "enum InvestmentPoolV2.Asset",
+        "name": "",
+        "type": "uint8"
+      },
+      {
+        "internalType": "enum InvestmentPoolV2.Protocol",
+        "name": "",
+        "type": "uint8"
+      }
+    ],
+    "name": "totalProtocolSharesByAsset",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
   {
     "inputs": [
       {
@@ -1053,6 +1222,43 @@ export const InvestmentPoolABI = [
     "outputs": [
       {
         "internalType": "contract IERC20",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+  "inputs": [],
+  "name": "usdc",
+  "outputs": [
+    {
+      "internalType": "contract IERC20",
+      "name": "",
+      "type": "address"
+    }
+  ],
+  "stateMutability": "view",
+  "type": "function"
+},
+  {
+    "inputs": [
+      {
+        "internalType": "enum InvestmentPoolV2.Asset",
+        "name": "",
+        "type": "uint8"
+      },
+      {
+        "internalType": "enum InvestmentPoolV2.Protocol",
+        "name": "",
+        "type": "uint8"
+      }
+    ],
+    "name": "assetAdapters",
+    "outputs": [
+      {
+        "internalType": "contract IProtocolAdapter",
         "name": "",
         "type": "address"
       }

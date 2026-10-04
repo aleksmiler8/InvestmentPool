@@ -60,12 +60,13 @@ const [showTransferModal, setShowTransferModal] = useState(false);
 const [showHarvestModal, setShowHarvestModal] = useState(false);
 const [showBalanceModal, setShowBalanceModal] = useState(false);
 const [balanceProtocol, setBalanceProtocol] = useState("Venus");
-const [realBalance, setRealBalance] = useState("");
+const [selectedAsset, setSelectedAsset] = useState<"USDT" | "USDC">("USDT");
 
 const [selectedProtocol, setSelectedProtocol] = useState("Beefy");
 const [fromProtocol, setFromProtocol] = useState("Beefy");
 const [toProtocol, setToProtocol] = useState("Venus");
 const [amount, setAmount] = useState("");
+const [realBalance, setRealBalance] = useState("");
 const [allocationInvestmentId, setAllocationInvestmentId] = useState("0");
 const [activeInvestments, setActiveInvestments] = useState<
   {
@@ -73,8 +74,11 @@ const [activeInvestments, setActiveInvestments] = useState<
     amount: string;
     remaining: string;
     endTime: number;
+    asset: "USDT" | "USDC";
   }[]
 >([]);
+const [totalInvested, setTotalInvested] = useState("0");
+const [activeInvested, setActiveInvested] = useState("0");
 const [protocolBalances, setProtocolBalances] = useState({
   Pool: "0",
   Reserve: "0",
@@ -114,7 +118,11 @@ const loadActiveInvestments = async () => {
     const investments = [];
 
     for (let i = 0; i < Number(count); i++) {
+      
       const investment = await contract.getInvestment(user, i);
+      const assetValue = await contract.getInvestmentAsset(user, i);
+      const asset: "USDT" | "USDC" =
+  Number(assetValue) === 0 ? "USDT" : "USDC";
 
       if (investment.active && !investment.finished) {
         const positionCount = await contract.getInvestmentPositionCount(
@@ -142,11 +150,12 @@ const loadActiveInvestments = async () => {
 
         if (remaining > 0n) {
           investments.push({
-            id: i,
-            amount: ethers.formatUnits(amount, 18),
-            remaining: ethers.formatUnits(remaining, 18),
-            endTime: Number(investment.endTime),
-          });
+  id: i,
+  amount: ethers.formatUnits(amount, 18),
+  remaining: ethers.formatUnits(remaining, 18),
+  endTime: Number(investment.endTime),
+  asset,
+});
         }
       }
     }
@@ -167,29 +176,74 @@ const loadActiveInvestments = async () => {
 const loadLiquidity = async () => {
   try {
     const contract = await getContract();
-const usdt = await getUSDT();
 
-const reserveWallet = await contract.reserveWallet();
+    const reserveWallet = await contract.reserveWallet();
 
-const pool = await usdt.balanceOf(await contract.getAddress())
-const reserve = await usdt.balanceOf(reserveWallet);
-const beefy = await contract.protocolBalance(2);
-const venus = await contract.protocolBalance(3);
-const pancake = await contract.protocolBalance(4);
-const aave = await contract.protocolBalance(5);
-const dforce = await contract.protocolBalance(6);
+    const assetEnum = selectedAsset === "USDT" ? 0 : 1;
+
+    let token: ethers.Contract;
+
+    if (selectedAsset === "USDT") {
+      token = await getUSDT();
+    } else {
+      const usdcAddress = await contract.usdc();
+
+      token = new ethers.Contract(
+        usdcAddress,
+        [
+          "function balanceOf(address account) view returns (uint256)",
+          "function decimals() view returns (uint8)",
+        ],
+        contract.runner
+      );
+    }
+
+    const decimals = await token.decimals();
+    const totalDeposits = await contract.totalDepositsByAsset(assetEnum);
+const totalActive = await contract.totalActiveDepositsByAsset(assetEnum);
+
+setTotalInvested(ethers.formatUnits(totalDeposits, decimals));
+setActiveInvested(ethers.formatUnits(totalActive, decimals));
+
+    const pool = await token.balanceOf(await contract.getAddress());
+    const reserve = await token.balanceOf(reserveWallet);
+
+    const beefy = await contract.protocolBalanceByAsset(
+      assetEnum,
+      2
+    );
+
+    const venus = await contract.protocolBalanceByAsset(
+      assetEnum,
+      3
+    );
+
+    const pancake = await contract.protocolBalanceByAsset(
+      assetEnum,
+      4
+    );
+
+    const aave = await contract.protocolBalanceByAsset(
+      assetEnum,
+      5
+    );
+
+    const dforce = await contract.protocolBalanceByAsset(
+      assetEnum,
+      6
+    );
 
     setProtocolBalances({
-      Pool: ethers.formatUnits(pool, 18),
-      Reserve: ethers.formatUnits(reserve, 18),
-      Beefy: ethers.formatUnits(beefy, 18),
-      Venus: ethers.formatUnits(venus, 18),
-      Pancake: ethers.formatUnits(pancake, 18),
-      Aave: ethers.formatUnits(aave, 18),
-        DForce: ethers.formatUnits(dforce, 18),
+      Pool: ethers.formatUnits(pool, decimals),
+      Reserve: ethers.formatUnits(reserve, decimals),
+      Beefy: ethers.formatUnits(beefy, decimals),
+      Venus: ethers.formatUnits(venus, decimals),
+      Pancake: ethers.formatUnits(pancake, decimals),
+      Aave: ethers.formatUnits(aave, decimals),
+      DForce: ethers.formatUnits(dforce, decimals),
     });
-  } catch (e) {
-    console.error("Failed to load liquidity:", e);
+  } catch (error) {
+    console.error("Error loading liquidity:", error);
   }
 };
 
@@ -197,7 +251,7 @@ useEffect(() => {
   loadLiquidity();
   loadApy();
   loadActiveInvestments();
-}, []);
+}, [selectedAsset]);
    const loadApy = async () => {
   const [markets, vaults, pools, aaveMarkets, dforceMarkets] = await Promise.allSettled([
     venusApiService.getMarkets(),
@@ -548,7 +602,37 @@ const harvestProfit = async () => {
       <h3 style={{ marginTop: 0 }}>
         🌐 Liquidity
       </h3>
+      <div className="flex gap-2 mb-4">
+  <button
+    onClick={() => setSelectedAsset("USDT")}
+    className={`px-4 py-2 rounded ${
+      selectedAsset === "USDT"
+        ? "bg-blue-600 text-white"
+        : "bg-gray-200"
+    }`}
+  >
+    USDT
+  </button>
 
+  <button
+    onClick={() => setSelectedAsset("USDC")}
+    className={`px-4 py-2 rounded ${
+      selectedAsset === "USDC"
+        ? "bg-blue-600 text-white"
+        : "bg-gray-200"
+    }`}
+  >
+    USDC
+  </button>
+</div>
+<div style={{ marginBottom: "16px" }}>
+  <div>
+    💰 Total invested: <strong>{totalInvested} {selectedAsset}</strong>
+  </div>
+  <div>
+    📊 Active invested: <strong>{activeInvested} {selectedAsset}</strong>
+  </div>
+</div>
       <table
         style={{
           width: "100%",
@@ -594,7 +678,7 @@ const harvestProfit = async () => {
             protocol.name as keyof typeof protocolBalances
           ]
         }{" "}
-        USDT
+         {selectedAsset}
       </td>
     </tr>
   ))}

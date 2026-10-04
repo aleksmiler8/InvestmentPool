@@ -22,9 +22,11 @@ export default function Home() {
   const [wallet, setWallet] = useState("");
   const [bnbBalance, setBnbBalance] = useState("0");
   const [usdtBalance, setUsdtBalance] = useState("0");
+  const [usdcBalance, setUsdcBalance] = useState("0");
 
   const [amount, setAmount] = useState("");
   const [period, setPeriod] = useState(30 * 24 * 60 * 60);
+  const [selectedAsset, setSelectedAsset] = useState<"USDT" | "USDC">("USDT");
 
   const [investmentCount, setInvestmentCount] = useState(0);
   const [totalDeposit, setTotalDeposit] = useState("0");
@@ -42,10 +44,10 @@ export default function Home() {
   const [rewardRates, setRewardRates] = useState<Record<number, string>>({});
 
   useEffect(() => {
-    if (isConnected && address) {
-      loadUser();
-    }
-  }, [isConnected, address]);
+  if (isConnected && address) {
+    loadUser();
+  }
+}, [isConnected, address, selectedAsset]);
     async function loadUser() {
     try {
       if (!isConnected || !address) return;
@@ -58,12 +60,30 @@ export default function Home() {
       setBnbBalance(ethers.formatEther(balance));
 
       const token = await getToken();
-      const usdt = await token.balanceOf(address);
-      setUsdtBalance(ethers.formatUnits(usdt, 18));
+const usdt = await token.balanceOf(address);
+setUsdtBalance(ethers.formatUnits(usdt, 18));
 
-      setWallet(address);
+const contract = await getContract();
 
-      const contract = await getContract();
+const usdcAddress = await contract.usdc();
+
+const usdcToken = new ethers.Contract(
+  usdcAddress,
+  [
+    "function balanceOf(address account) view returns (uint256)",
+    "function decimals() view returns (uint8)",
+  ],
+  provider
+);
+
+const usdc = await usdcToken.balanceOf(address);
+const usdcDecimals = Number(await usdcToken.decimals());
+
+setUsdcBalance(
+  ethers.formatUnits(usdc, usdcDecimals)
+);
+
+setWallet(address);
 
       setRewardRates({
   86400: (Number(await contract.rewardRate(86400)) / 100).toFixed(2),
@@ -97,20 +117,35 @@ for (
   i < Number(investor.investmentCount);
   i++
 ) {
-    const inv = await contract.getInvestment(address, i);
+  const inv = await contract.getInvestment(address, i);
 
-if (inv[5]) {
+  if (inv[5]) {
+    const asset = await contract.getInvestmentAsset(
+      address,
+      i
+    );
+
     list.push({
-        index: i,
-        investment: inv,
+      index: i,
+      investment: inv,
+      asset: Number(asset),
     });
 
-    occupied[Number(inv[3])] = true;
-}
+    // USDT = 0
+    // USDC = 1
+    //
+    // Блокируем период только для выбранного актива.
+    if (
+      Number(asset) ===
+      (selectedAsset === "USDT" ? 0 : 1)
+    ) {
+      occupied[Number(inv[3])] = true;
+    }
+  }
 }
 
 setInvestments(list);
-      setOccupiedPeriods(occupied);
+setOccupiedPeriods(occupied);
 
       const activeCount = list.filter(
   (inv) => inv.investment[5] === true
@@ -143,10 +178,11 @@ setInvestments(list);
         }}
       >
         <Header
-          wallet={wallet}
-          bnbBalance={bnbBalance}
-          usdtBalance={usdtBalance}
-        />
+  wallet={wallet}
+  bnbBalance={bnbBalance}
+  usdtBalance={usdtBalance}
+  usdcBalance={usdcBalance}
+/>
 
         <StatsCards
   investmentCount={investmentCount}
@@ -154,7 +190,27 @@ setInvestments(list);
   totalReward={totalReward}
   t={t}
 />
+<div style={{ display: "flex", gap: "8px", marginBottom: "15px" }}>
+  <button
+    onClick={() => setSelectedAsset("USDT")}
+    style={{
+      padding: "8px 16px",
+      fontWeight: selectedAsset === "USDT" ? "bold" : "normal",
+    }}
+  >
+    USDT
+  </button>
 
+  <button
+    onClick={() => setSelectedAsset("USDC")}
+    style={{
+      padding: "8px 16px",
+      fontWeight: selectedAsset === "USDC" ? "bold" : "normal",
+    }}
+  >
+    USDC
+  </button>
+</div>
         <h3>{t("my_investments")}</h3>
 
         <InvestmentList
@@ -216,22 +272,54 @@ const isFinished =
 
               setDepositLoading(true);
 
-              const token = await getToken();
               const contract = await getContract();
 
-              const value = ethers.parseUnits(amount, 18);
+let token;
 
-              const approveTx = await token.approve(
-                await contract.getAddress(),
-                value
-              );
+if (selectedAsset === "USDT") {
+  token = await getToken();
+} else {
+  const usdcAddress = await contract.usdc();
 
-              await approveTx.wait();
+  token = new ethers.Contract(
+    usdcAddress,
+    [
+      "function approve(address spender, uint256 amount) returns (bool)",
+      "function balanceOf(address account) view returns (uint256)",
+      "function decimals() view returns (uint8)",
+    ],
+    contract.runner
+  );
+}
 
-              const tx = await contract.deposit(
-                value,
-                period
-              );
+const decimals = Number(await token.decimals());
+
+const value = ethers.parseUnits(
+  amount,
+  decimals
+);
+
+const approveTx = await token.approve(
+  await contract.getAddress(),
+  value
+);
+
+await approveTx.wait();
+
+let tx;
+
+if (selectedAsset === "USDT") {
+  tx = await contract.deposit(
+    value,
+    period
+  );
+} else {
+  tx = await contract.depositAsset(
+    value,
+    period,
+    1
+  );
+}
 
               await tx.wait();
 

@@ -9,6 +9,10 @@
     "lint": "eslint .",
     "preview": "vite preview"
   },
+  "overrides": {
+  "@wagmi/core": "2.22.1",
+  "@wagmi/connectors": "6.2.0"
+},
   "dependencies": {
     "@reown/appkit": "^1.8.22",
     "@reown/appkit-adapter-wagmi": "^1.8.22",
@@ -19,7 +23,7 @@
     "i18next-http-backend": "^4.0.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
-    "react-hot-toast": "^2.6.0",
+    "react-hot-toast": "^2.6.1",
     "react-i18next": "^17.0.8",
     "react-router-dom": "^7.18.0",
     "viem": "^2.54.3",

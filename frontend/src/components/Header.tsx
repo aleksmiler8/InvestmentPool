@@ -7,12 +7,14 @@ type HeaderProps = {
   wallet: string;
   bnbBalance: string;
   usdtBalance: string;
+  usdcBalance: string;
 };
 
 export default function Header({
   wallet,
   bnbBalance,
   usdtBalance,
+  usdcBalance,
 }: HeaderProps) {
   const navigate = useNavigate();
   const { t } = useTranslation();
@@ -95,6 +97,7 @@ export default function Header({
               >
                 <div>💰 BNB: {Number(bnbBalance).toFixed(4)}</div>
                 <div>🪙 USDT: {Number(usdtBalance).toFixed(4)}</div>
+                <div>🪙 USDC: {Number(usdcBalance).toFixed(4)}</div>
               </div>
 
               <button
