@@ -100,6 +100,16 @@ contract VenusUSDCAdapter {
 
         return amount;
     }
+    
+    /**
+     * @notice Total USDC value currently supplied to Venus.
+     */
+    function totalAssets() external view returns (uint256) {
+        uint256 shares = vUSDC.balanceOf(address(this));
+        if (shares == 0) return 0;
+
+        return (shares * vUSDC.exchangeRateStored()) / 1e18;
+    }
 
     /**
      * @notice Current USDC value supplied to Venus.

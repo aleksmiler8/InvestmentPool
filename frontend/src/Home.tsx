@@ -101,13 +101,38 @@ setWallet(address);
 
       setRegistered(Number(investor.investmentCount) > 0);
 
-      setTotalDeposit(
-        ethers.formatUnits(investor.totalInvested, 18)
-      );
+      const assetId = selectedAsset === "USDT" ? 0 : 1;
 
-      setTotalReward(
-        ethers.formatUnits(investor.totalReward, 18)
-      );
+const assetTotal = await contract.totalDepositsByAsset(
+  assetId
+);
+
+setTotalDeposit(
+  ethers.formatUnits(assetTotal, 18)
+);
+
+let assetReward = 0n;
+
+for (
+  let i = 0;
+  i < Number(investor.investmentCount);
+  i++
+) {
+  const inv = await contract.getInvestment(address, i);
+
+  const invAsset = await contract.getInvestmentAsset(
+    address,
+    i
+  );
+
+  if (Number(invAsset) === assetId) {
+    assetReward += BigInt(inv[4]);
+  }
+}
+
+setTotalReward(
+  ethers.formatUnits(assetReward, 18)
+);
 
       const list: any[] = [];
 const occupied: Record<number, boolean> = {};

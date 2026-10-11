@@ -19,7 +19,7 @@ export default defineConfig({
   settings: {
     optimizer: {
       enabled: true,
-      runs: 200,
+      runs: 1,
     },
     viaIR: true,
   },
@@ -40,6 +40,7 @@ export default defineConfig({
     hardhatMainnet: {
   type: "edr-simulated",
   chainType: "l1",
+  allowUnlimitedContractSize: true,
 },
 
     hardhatOp: {

@@ -3,7 +3,7 @@ import { network } from "hardhat";
 const { ethers } = await network.connect();
 
 const POOL = "0x19e4b9fD1B824FfF343D87eE8625b5032468EB07";
-const ADAPTER = "0xe0D6CfeF7B09b88D54E3c75F618c06100e628C9a";
+const ADAPTER = "0x54aFeb1F19e60337d755c385E7530492443368df";
 
 // Asset.USDC = 1
 // Protocol.Aave = 5

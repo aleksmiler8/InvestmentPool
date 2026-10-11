@@ -125,6 +125,17 @@ contract AaveUSDCAdapter {
     {
         return aUSDC.balanceOf(address(this));
     }
+    
+    /**
+     * @notice Total USDC supplied to Aave, including accrued interest.
+     */
+    function totalAssets()
+        external
+        view
+        returns (uint256)
+    {
+        return aUSDC.balanceOf(address(this));
+    }
 
     /**
      * @notice Token addresses used by this adapter.
