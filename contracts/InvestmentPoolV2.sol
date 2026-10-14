@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+﻿// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
@@ -51,7 +51,7 @@ contract InvestmentPoolV2 is
     uint256 public constant SIX_MONTHS = 180 days;
     uint256 public constant YEAR = 365 days;
 
-    uint256 public constant MAX_REWARD_BPS = 2000; // 20% максимум
+    uint256 public constant MAX_REWARD_BPS = 2000; // 20% РјР°РєСЃРёРјСѓРј
     uint256 public constant BPS_DENOMINATOR = 10000;
 
     // ============================================================
@@ -111,10 +111,10 @@ contract InvestmentPoolV2 is
         Investment[] investments;
     }
 
-    
+
     // ============================================================
-    // STORAGE — CORE AND ADAPTERS
-    // Порядок существующих переменных должен сохраняться
+    // STORAGE вЂ” CORE AND ADAPTERS
+    // РџРѕСЂСЏРґРѕРє СЃСѓС‰РµСЃС‚РІСѓСЋС‰РёС… РїРµСЂРµРјРµРЅРЅС‹С… РґРѕР»Р¶РµРЅ СЃРѕС…СЂР°РЅСЏС‚СЊСЃСЏ
     // ============================================================
 
     IERC20 public usdt;
@@ -145,7 +145,7 @@ contract InvestmentPoolV2 is
     uint256 public earlyWithdrawFee;
     uint256 public minimumInvestment;
 
-    // Существующие поля мультиактивного учёта — строго после slot 19
+    // РЎСѓС‰РµСЃС‚РІСѓСЋС‰РёРµ РїРѕР»СЏ РјСѓР»СЊС‚РёР°РєС‚РёРІРЅРѕРіРѕ СѓС‡С‘С‚Р° вЂ” СЃС‚СЂРѕРіРѕ РїРѕСЃР»Рµ slot 19
     IERC20 public usdc;
     mapping(address => mapping(uint256 => Asset)) private investmentAsset;
 
@@ -163,17 +163,17 @@ contract InvestmentPoolV2 is
 
     mapping(uint256 => Asset) private pendingReserveFeeAsset;
 
-    // Новые поля автораспределения
+    // РќРѕРІС‹Рµ РїРѕР»СЏ Р°РІС‚РѕСЂР°СЃРїСЂРµРґРµР»РµРЅРёСЏ
     mapping(Protocol => uint256) public targetAllocationBps;
     bool public autoAllocationEnabled;
     uint256 public autoAllocationMinAmount;
     Protocol[] public allocationProtocols;
 
-    // Новый порядок вывода
+    // РќРѕРІС‹Р№ РїРѕСЂСЏРґРѕРє РІС‹РІРѕРґР°
     Protocol[] public withdrawOrder;
 
-    // Новые настройки автоаллокатора отдельно для каждого актива.
-// Добавлены в зарезервированную область storage.
+    // РќРѕРІС‹Рµ РЅР°СЃС‚СЂРѕР№РєРё Р°РІС‚РѕР°Р»Р»РѕРєР°С‚РѕСЂР° РѕС‚РґРµР»СЊРЅРѕ РґР»СЏ РєР°Р¶РґРѕРіРѕ Р°РєС‚РёРІР°.
+// Р”РѕР±Р°РІР»РµРЅС‹ РІ Р·Р°СЂРµР·РµСЂРІРёСЂРѕРІР°РЅРЅСѓСЋ РѕР±Р»Р°СЃС‚СЊ storage.
 mapping(Asset => mapping(Protocol => uint256))
     public targetAllocationBpsByAsset;
 
@@ -283,9 +283,9 @@ mapping(Asset => Protocol[]) public allocationProtocolsByAsset;
         earlyWithdrawFee = 1500;
         minimumInvestment = 25e18;
 
-        // autoAllocationEnabled остаётся false по умолчанию
-        // venusToken должен быть установлен через setVenusToken
-        // ДО первого депозита в Venus
+        // autoAllocationEnabled РѕСЃС‚Р°С‘С‚СЃСЏ false РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ
+        // venusToken РґРѕР»Р¶РµРЅ Р±С‹С‚СЊ СѓСЃС‚Р°РЅРѕРІР»РµРЅ С‡РµСЂРµР· setVenusToken
+        // Р”Рћ РїРµСЂРІРѕРіРѕ РґРµРїРѕР·РёС‚Р° РІ Venus
     }
 
     // ============================================================
@@ -341,8 +341,8 @@ mapping(Asset => Protocol[]) public allocationProtocolsByAsset;
         Investor storage investor = investors[msg.sender];
 
         /*
-         * Один актив + один период = одна активная инвестиция.
-         * USDT и USDC друг другу не мешают.
+         * РћРґРёРЅ Р°РєС‚РёРІ + РѕРґРёРЅ РїРµСЂРёРѕРґ = РѕРґРЅР° Р°РєС‚РёРІРЅР°СЏ РёРЅРІРµСЃС‚РёС†РёСЏ.
+         * USDT Рё USDC РґСЂСѓРі РґСЂСѓРіСѓ РЅРµ РјРµС€Р°СЋС‚.
          */
         if (msg.sender != owner()) {
             for (uint256 i = 0; i < investor.investments.length; i++) {
@@ -389,19 +389,19 @@ mapping(Asset => Protocol[]) public allocationProtocolsByAsset;
         investor.totalInvested += amount;
 
         /*
-         * Новая multi-asset бухгалтерия.
+         * РќРѕРІР°СЏ multi-asset Р±СѓС…РіР°Р»С‚РµСЂРёСЏ.
          */
         totalDepositsByAsset[asset] += amount;
         totalActiveDepositsByAsset[asset] += amount;
         protocolBalanceByAsset[asset][Protocol.Pool] += amount;
 
         /*
-         * Старые глобальные счётчики (legacy USDT).
+         * РЎС‚Р°СЂС‹Рµ РіР»РѕР±Р°Р»СЊРЅС‹Рµ СЃС‡С‘С‚С‡РёРєРё (legacy USDT).
          *
-         * ВАЖНО: обновляются ДО _autoAllocate, потому что
-         * _autoAllocate уменьшит protocolBalanceByAsset[Pool],
-         * и старая переменная protocolBalance[Pool] должна
-         * быть уже синхронизирована.
+         * Р’РђР–РќРћ: РѕР±РЅРѕРІР»СЏСЋС‚СЃСЏ Р”Рћ _autoAllocate, РїРѕС‚РѕРјСѓ С‡С‚Рѕ
+         * _autoAllocate СѓРјРµРЅСЊС€РёС‚ protocolBalanceByAsset[Pool],
+         * Рё СЃС‚Р°СЂР°СЏ РїРµСЂРµРјРµРЅРЅР°СЏ protocolBalance[Pool] РґРѕР»Р¶РЅР°
+         * Р±С‹С‚СЊ СѓР¶Рµ СЃРёРЅС…СЂРѕРЅРёР·РёСЂРѕРІР°РЅР°.
          */
         if (asset == Asset.USDT) {
             totalDeposits += amount;
@@ -410,9 +410,9 @@ mapping(Asset => Protocol[]) public allocationProtocolsByAsset;
         }
 
         /*
-         * АВТО-РАСПРЕДЕЛЕНИЕ.
-         * Средства уже в Pool. Пытаемся разложить
-         * по targetAllocationBps.
+         * РђР’РўРћ-Р РђРЎРџР Р•Р”Р•Р›Р•РќРР•.
+         * РЎСЂРµРґСЃС‚РІР° СѓР¶Рµ РІ Pool. РџС‹С‚Р°РµРјСЃСЏ СЂР°Р·Р»РѕР¶РёС‚СЊ
+         * РїРѕ targetAllocationBps.
          */
         _autoAllocate(msg.sender, investmentId, asset, amount);
 
@@ -455,7 +455,7 @@ mapping(Asset => Protocol[]) public allocationProtocolsByAsset;
         revert("Unsupported protocol");
     }
 
-    
+
 function _protocolAssets(
     Protocol protocol,
     Asset asset
@@ -571,7 +571,7 @@ function _protocolAssets(
         IERC20 assetToken = asset == Asset.USDC ? usdc : usdt;
         require(address(assetToken) != address(0), "Asset token not set");
 
-        
+
         if (protocol == Protocol.Venus) {
     if (asset == Asset.USDC) {
         IProtocolAdapter venusUsdcAdapter =
@@ -657,15 +657,15 @@ function _protocolAssets(
     // ============================================================
 
     /*
-     * Вызывается из _depositAsset ПОСЛЕ зачисления средств.
+     * Р’С‹Р·С‹РІР°РµС‚СЃСЏ РёР· _depositAsset РџРћРЎР›Р• Р·Р°С‡РёСЃР»РµРЅРёСЏ СЃСЂРµРґСЃС‚РІ.
      *
-     * Логика:
-     *   - если выключено или сумма мала — средства остаются в Pool
-     *   - если сумма targetAllocationBps > 10000 — выходим (защита)
-     *   - если сумма < 10000 — остаток остаётся в Pool
-     *   - каждый slice считается честно, пыль остаётся в Pool
-     *   - Venus пропускается для USDC
-     *   - если адаптер упал — slice остаётся в Pool, депозит не роняется
+     * Р›РѕРіРёРєР°:
+     *   - РµСЃР»Рё РІС‹РєР»СЋС‡РµРЅРѕ РёР»Рё СЃСѓРјРјР° РјР°Р»Р° вЂ” СЃСЂРµРґСЃС‚РІР° РѕСЃС‚Р°СЋС‚СЃСЏ РІ Pool
+     *   - РµСЃР»Рё СЃСѓРјРјР° targetAllocationBps > 10000 вЂ” РІС‹С…РѕРґРёРј (Р·Р°С‰РёС‚Р°)
+     *   - РµСЃР»Рё СЃСѓРјРјР° < 10000 вЂ” РѕСЃС‚Р°С‚РѕРє РѕСЃС‚Р°С‘С‚СЃСЏ РІ Pool
+     *   - РєР°Р¶РґС‹Р№ slice СЃС‡РёС‚Р°РµС‚СЃСЏ С‡РµСЃС‚РЅРѕ, РїС‹Р»СЊ РѕСЃС‚Р°С‘С‚СЃСЏ РІ Pool
+     *   - Venus РїСЂРѕРїСѓСЃРєР°РµС‚СЃСЏ РґР»СЏ USDC
+     *   - РµСЃР»Рё Р°РґР°РїС‚РµСЂ СѓРїР°Р» вЂ” slice РѕСЃС‚Р°С‘С‚СЃСЏ РІ Pool, РґРµРїРѕР·РёС‚ РЅРµ СЂРѕРЅСЏРµС‚СЃСЏ
      */
     function _autoAllocate(
     address user,
@@ -685,7 +685,7 @@ function _protocolAssets(
     for (uint256 i = 0; i < protocols.length; i++) {
         Protocol p = protocols[i];
 
-        // Venus разрешён только для USDT.
+        // Venus СЂР°Р·СЂРµС€С‘РЅ С‚РѕР»СЊРєРѕ РґР»СЏ USDT.
         if (asset == Asset.USDC && p == Protocol.Venus) {
             return;
         }
@@ -706,23 +706,28 @@ function _protocolAssets(
                 uint256 slice = (amount * bps) / BPS_DENOMINATOR;
         if (slice == 0) continue;
 
-            
-        try this._externalInvest(user, investmentId, p, slice) {
+try this._externalInvest(user, investmentId, p, slice) {
     emit AutoAllocated(p, slice);
 } catch Error(string memory reason) {
-    // Логируем и оставляем слайс в Pool.
+    if (asset == Asset.USDC) {
+        revert(reason);
+    }
     emit AllocationFailed(p, slice, reason);
 } catch {
+    if (asset == Asset.USDC) {
+        revert("USDC_AUTO_ALLOCATION_FAILED");
+    }
     emit AllocationFailed(p, slice, "unknown");
 }
+
     }
 }
 /*
-     * Внешняя обёртка для try/catch.
-     * Может вызываться ТОЛЬКО самим контрактом.
+     * Р’РЅРµС€РЅСЏСЏ РѕР±С‘СЂС‚РєР° РґР»СЏ try/catch.
+     * РњРѕР¶РµС‚ РІС‹Р·С‹РІР°С‚СЊСЃСЏ РўРћР›Р¬РљРћ СЃР°РјРёРј РєРѕРЅС‚СЂР°РєС‚РѕРј.
      *
-     * ВАЖНО: НЕ добавлять nonReentrant — иначе сломается
-     * авто-распределение, потому что _depositAsset уже взял guard.
+     * Р’РђР–РќРћ: РќР• РґРѕР±Р°РІР»СЏС‚СЊ nonReentrant вЂ” РёРЅР°С‡Рµ СЃР»РѕРјР°РµС‚СЃСЏ
+     * Р°РІС‚Рѕ-СЂР°СЃРїСЂРµРґРµР»РµРЅРёРµ, РїРѕС‚РѕРјСѓ С‡С‚Рѕ _depositAsset СѓР¶Рµ РІР·СЏР» guard.
      */
     function _externalInvest(
         address user,
@@ -850,10 +855,10 @@ function _protocolAssets(
     }
 
     /*
-     * Возвращает текущее распределение по протоколам
-     * для отображения в админке.
+     * Р’РѕР·РІСЂР°С‰Р°РµС‚ С‚РµРєСѓС‰РµРµ СЂР°СЃРїСЂРµРґРµР»РµРЅРёРµ РїРѕ РїСЂРѕС‚РѕРєРѕР»Р°Рј
+     * РґР»СЏ РѕС‚РѕР±СЂР°Р¶РµРЅРёСЏ РІ Р°РґРјРёРЅРєРµ.
      */
-    
+
 function getAllocationSnapshot(
     Asset asset
 )
@@ -901,7 +906,7 @@ function getAllocationSnapshot(
     // LIQUIDITY RECOVERY (WITHDRAW PATH)
     // ============================================================
 
-    
+
 function _protocolAvailableAssets(
     Protocol protocol,
     Asset asset
@@ -980,7 +985,7 @@ function _protocolAvailableAssets(
 
         uint256 beforeBalance = assetToken.balanceOf(address(this));
 
-        
+
         if (protocol == Protocol.Venus) {
             if (asset == Asset.USDC) {
                 IProtocolAdapter adapter =
@@ -1486,7 +1491,7 @@ function _protocolAvailableAssets(
     function setAutoAllocationMinAmount(uint256 amount) external onlyOwner {
         autoAllocationMinAmount = amount;
     }
-    
+
 function setTargetAllocationForAsset(
     Asset asset,
     Protocol protocol,
@@ -1499,9 +1504,9 @@ function setTargetAllocationForAsset(
     );
     require(bps <= BPS_DENOMINATOR, "bps > 100%");
 
-    // Venus запрещён в автоматическом распределении USDC.
+    // Venus Р·Р°РїСЂРµС‰С‘РЅ РІ Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРѕРј СЂР°СЃРїСЂРµРґРµР»РµРЅРёРё USDC.
     if (asset == Asset.USDC) {
-      require(protocol != Protocol.Venus, "VENUS_USDC");  
+      require(protocol != Protocol.Venus, "VENUS_USDC");
     }
 
     targetAllocationBpsByAsset[asset][protocol] = bps;
@@ -1524,7 +1529,7 @@ function setAllocationProtocolsForAsset(
 ) external onlyOwner {
     uint256 total;
 
-    // Проверяем весь список до его сохранения.
+    // РџСЂРѕРІРµСЂСЏРµРј РІРµСЃСЊ СЃРїРёСЃРѕРє РґРѕ РµРіРѕ СЃРѕС…СЂР°РЅРµРЅРёСЏ.
     for (uint256 i = 0; i < protocols.length; i++) {
         Protocol p = protocols[i];
 
@@ -1534,10 +1539,10 @@ function setAllocationProtocolsForAsset(
         );
 
         if (asset == Asset.USDC) {
-          require(p != Protocol.Venus, "VENUS_USDC");  
+          require(p != Protocol.Venus, "VENUS_USDC");
         }
 
-        // Не допускаем повторения протоколов.
+        // РќРµ РґРѕРїСѓСЃРєР°РµРј РїРѕРІС‚РѕСЂРµРЅРёСЏ РїСЂРѕС‚РѕРєРѕР»РѕРІ.
         for (uint256 j = 0; j < i; j++) {
             require(protocols[j] != p, "DUP");
         }
@@ -1558,8 +1563,8 @@ function setAllocationProtocolsForAsset(
     // ============================================================
 
     /*
-     * Обрабатывает pendingReserveFees ТОЛЬКО одного актива за вызов.
-     * Чужие активы пропускаются через continue, а не роняют вызов.
+     * РћР±СЂР°Р±Р°С‚С‹РІР°РµС‚ pendingReserveFees РўРћР›Р¬РљРћ РѕРґРЅРѕРіРѕ Р°РєС‚РёРІР° Р·Р° РІС‹Р·РѕРІ.
+     * Р§СѓР¶РёРµ Р°РєС‚РёРІС‹ РїСЂРѕРїСѓСЃРєР°СЋС‚СЃСЏ С‡РµСЂРµР· continue, Р° РЅРµ СЂРѕРЅСЏСЋС‚ РІС‹Р·РѕРІ.
      */
     function processPendingReserveFees() public nonReentrant {
         uint256 processed;
@@ -1579,7 +1584,7 @@ function setAllocationProtocolsForAsset(
                 hasTarget = true;
             }
 
-            // Пропускаем чужие активы вместо revert.
+            // РџСЂРѕРїСѓСЃРєР°РµРј С‡СѓР¶РёРµ Р°РєС‚РёРІС‹ РІРјРµСЃС‚Рѕ revert.
             if (feeAsset != targetAsset) continue;
 
             uint256 totalReturned;
@@ -1618,7 +1623,7 @@ function setAllocationProtocolsForAsset(
         processPendingReserveFees();
     }
 
-    
+
 
     // ============================================================
     // MIGRATION
@@ -1647,8 +1652,8 @@ function setAllocationProtocolsForAsset(
                 totalProtocolShares[protocol];
         }
 
-        // Старые инвестиции автоматически USDT (Asset.USDT == 0).
-        // Старые pendingReserveFees автоматически USDT (Asset.USDT == 0).
+        // РЎС‚Р°СЂС‹Рµ РёРЅРІРµСЃС‚РёС†РёРё Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё USDT (Asset.USDT == 0).
+        // РЎС‚Р°СЂС‹Рµ pendingReserveFees Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё USDT (Asset.USDT == 0).
     }
 
     // ============================================================

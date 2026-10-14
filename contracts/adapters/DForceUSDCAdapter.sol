@@ -112,10 +112,18 @@ contract DForceUSDCAdapter is IProtocolAdapter {
             "DForceUSDCAdapter: no USDC received"
         );
 
-        iUSDC.mint(
-            address(this),
-            received
-        );
+        uint256 sharesBefore =
+    iUSDC.balanceOf(address(this));
+
+iUSDC.mint(
+    address(this),
+    received
+);
+
+require(
+    iUSDC.balanceOf(address(this)) > sharesBefore,
+    "DForceUSDCAdapter: no iUSDC minted"
+);
 
         require(
             usdc.balanceOf(address(this)) == 0,

@@ -17,10 +17,18 @@ interface IAaveV3PoolUSDC {
         uint256 amount,
         address to
     ) external returns (uint256);
+    function getReserveNormalizedIncome(
+    address asset
+) external view returns (uint256);
 }
 
 interface IAaveUSDCAToken {
     function balanceOf(address account)
+        external
+        view
+        returns (uint256);
+
+    function scaledBalanceOf(address account)
         external
         view
         returns (uint256);
@@ -108,12 +116,19 @@ contract AaveUSDCAdapter {
      * @notice Current USDC supplied to Aave.
      */
     function balanceUnderlying()
-        external
-        view
-        returns (uint256)
-    {
-        return aUSDC.balanceOf(address(this));
-    }
+    external
+    view
+    returns (uint256)
+{
+    uint256 income =
+        aavePool.getReserveNormalizedIncome(address(usdc));
+
+    return
+        aUSDC.scaledBalanceOf(address(this))
+        * income
+        / 1e27;
+}
+
 
     /**
      * @notice Current aUSDC balance.
@@ -130,12 +145,20 @@ contract AaveUSDCAdapter {
      * @notice Total USDC supplied to Aave, including accrued interest.
      */
     function totalAssets()
-        external
-        view
-        returns (uint256)
-    {
-        return aUSDC.balanceOf(address(this));
-    }
+    external
+    view
+    returns (uint256)
+{
+    uint256 income =
+        aavePool.getReserveNormalizedIncome(address(usdc));
+
+    uint256 supplied =
+        aUSDC.scaledBalanceOf(address(this))
+        * income
+        / 1e27;
+
+    return supplied + usdc.balanceOf(address(this));
+}
 
     /**
      * @notice Token addresses used by this adapter.

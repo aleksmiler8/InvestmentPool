@@ -140,10 +140,18 @@ contract DForceAdapter is IProtocolAdapter {
             "DForceAdapter: no USDT received"
         );
 
-        iUSDT.mint(
-            address(this),
-            received
-        );
+                uint256 sharesBefore =
+    iUSDT.balanceOf(address(this));
+
+iUSDT.mint(
+    address(this),
+    received
+);
+
+require(
+    iUSDT.balanceOf(address(this)) > sharesBefore,
+    "DForceAdapter: no iUSDT minted"
+);
 
         require(
             usdt.balanceOf(address(this)) == 0,
