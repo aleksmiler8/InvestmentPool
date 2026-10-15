@@ -75,22 +75,29 @@ contract AaveUSDCAdapter {
      * @notice Supply USDC to Aave V3.
      * @dev Called only by InvestmentPool.
      */
-    function deposit(uint256 amount)
-        external
-        onlyPool
-        returns (uint256)
-    {
-        usdc.forceApprove(address(aavePool), amount);
 
-        aavePool.supply(
-            address(usdc),
-            amount,
-            address(this),
-            0
-        );
+function deposit(uint256 amount)
+    external
+    onlyPool
+    returns (uint256)
+{
+    // Забираем USDC из основного пула в адаптер
+    usdc.safeTransferFrom(pool, address(this), amount);
 
-        return amount;
-    }
+    // Разрешаем Aave использовать полученные USDC
+    usdc.forceApprove(address(aavePool), amount);
+
+    // Размещаем USDC в Aave
+    aavePool.supply(
+        address(usdc),
+        amount,
+        address(this),
+        0
+    );
+
+    return amount;
+}
+
 
     /**
      * @notice Withdraw USDC from Aave V3.
@@ -140,7 +147,7 @@ contract AaveUSDCAdapter {
     {
         return aUSDC.balanceOf(address(this));
     }
-    
+
     /**
      * @notice Total USDC supplied to Aave, including accrued interest.
      */

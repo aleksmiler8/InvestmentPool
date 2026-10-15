@@ -16,7 +16,7 @@ async function main() {
   await adapter.waitForDeployment();
 
   const address = await adapter.getAddress();
-  console.log("AaveUSDCAdapter:", address);
+console.log("AaveUSDCAdapter:", address);
 
   console.log("getTokens:", await adapter.getTokens());
   console.log("totalAssets:", await adapter.totalAssets());
