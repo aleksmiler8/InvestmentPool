@@ -709,14 +709,10 @@ function _protocolAssets(
 try this._externalInvest(user, investmentId, p, slice) {
     emit AutoAllocated(p, slice);
 } catch Error(string memory reason) {
-    if (asset == Asset.USDC) {
-        revert(reason);
-    }
+    // A failed slice remains in the pool; do not revert successful slices.
     emit AllocationFailed(p, slice, reason);
 } catch {
-    if (asset == Asset.USDC) {
-        revert("USDC_AUTO_ALLOCATION_FAILED");
-    }
+    // Preserve the deposit and report adapters that revert without a reason.
     emit AllocationFailed(p, slice, "unknown");
 }
 

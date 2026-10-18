@@ -65,10 +65,6 @@ describe("InvestmentPoolV2 auto allocation integration", function () {
       usdcAave.waitForDeployment(),
       usdcDForce.waitForDeployment(),
     ]);
-    console.log("USDT Aave:", await usdtAave.getAddress());
-console.log("USDT dForce:", await usdtDForce.getAddress());
-console.log("USDC Aave:", await usdcAave.getAddress());
-console.log("USDC dForce:", await usdcDForce.getAddress());
 
     const VToken = await ethers.getContractFactory("MockVToken");
 
@@ -169,20 +165,7 @@ async function configureUSDC(pool: any) {
     await fundAndApprove(usdt, user, pool, amount);
     await pool.connect(user).deposit(amount, DAY);
     
-    console.log("USDT dForce diagnostic", {
-      pool: await pool.getAddress(),
-      adapter: await usdtDForce.getAddress(),
-      poolBalance: await usdt.balanceOf(await pool.getAddress()),
-      adapterBalance: await usdtDForce.totalAssets(),
-      allowance: await usdt.allowance(
-        await pool.getAddress(),
-        await usdtDForce.getAddress()
-      ),
-      failDeposit: await usdtDForce.failDeposit(),
-      adapterCode: await ethers.provider.getCode(
-        await usdtDForce.getAddress()
-      ),
-    });
+
 
 
     assert.equal(
@@ -393,4 +376,61 @@ async function configureUSDC(pool: any) {
     assert.equal(investmentAfter.active, false);
     assert.equal(investmentAfter.finished, true);
   });
+
+  it(
+    "keeps a failed USDC allocation slice in the pool and still allows withdrawal",
+    async function () {
+      const { user, pool, usdc, usdcAave, usdcDForce } = await deployFixture();
+
+      await configureUSDC(pool);
+      await usdcDForce.setFailDeposit(true);
+
+      const amount = ethers.parseEther("1000");
+      await fundAndApprove(usdc, user, pool, amount);
+
+      const tx = await pool.connect(user).depositAsset(amount, DAY, USDC);
+      const receipt = await tx.wait();
+
+      assert.equal(
+        await usdcAave.totalAssets(),
+        ethers.parseEther("500"),
+        "Aave should keep its successful 50% allocation"
+      );
+      assert.equal(
+        await usdcDForce.totalAssets(),
+        0n,
+        "The failing dForce adapter should not receive USDC"
+      );
+      assert.equal(
+        await usdc.balanceOf(await pool.getAddress()),
+        ethers.parseEther("500"),
+        "The failed dForce slice should remain in the pool"
+      );
+      assert.equal(
+        await pool.getInvestmentPositionCount(await user.getAddress(), 0),
+        1n,
+        "Only the successful Aave allocation should create a position"
+      );
+
+        const allocationFailedTopic = pool.interface.getEvent(
+        "AllocationFailed"
+      ).topicHash;
+      assert.ok(
+        receipt.logs.some((log: any) => log.topics[0] === allocationFailedTopic),
+        "The failed allocation should be visible in transaction logs"
+      );
+
+      await advanceOneDay(ethers);
+      await pool.connect(user).withdraw(0);
+
+      assert.equal(
+        await usdc.balanceOf(await user.getAddress()),
+        amount,
+        "The user should receive the full USDC deposit back"
+      );
+      assert.equal(await usdc.balanceOf(await pool.getAddress()), 0n);
+      assert.equal(await usdcAave.totalAssets(), 0n);
+      assert.equal(await usdcDForce.totalAssets(), 0n);
+    }
+  );
 });
